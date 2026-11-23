@@ -81,7 +81,7 @@ Deploy \`worker/\` separately to Cloudflare Workers. Follow \`worker/README.md\`
 
 - Chat can respond in Egyptian Arabic, simplified Modern Standard Arabic, or English.
 - Speech recognition requests the \`ar-EG\` locale by default.
-- In the native mobile build, the Capgo speech-recognition plugin uses Android/iOS speech services. Locale availability and transcript quality depend on the device and operating-system speech service.
+- In the native mobile build, the Capgo speech-recognition plugin uses Android/iOS speech services, while a separate native speech-synthesis plugin uses Android TextToSpeech and iOS AVSpeechSynthesizer. Locale availability and transcript quality depend on the device and operating-system speech service.
 - Speech output uses the system/browser voice with locale \`ar-EG\`; a true Egyptian voice is available only when the device exposes one. StudyAI falls back to another Arabic voice when necessary.
 - Speech recognition and speech synthesis are different capabilities; support for one does not guarantee support for the other.
 
