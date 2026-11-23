@@ -1,9 +1,8 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { build } from 'esbuild';
+import { fileURLToPath } from 'node:url';
 
-const root = process.cwd();
-const webDir = new URL('../www/', import.meta.url);
-const webPath = new URL('../www', import.meta.url).pathname;
+const webPath = fileURLToPath(new URL('../www', import.meta.url));
 
 await rm(webPath, { recursive: true, force: true });
 await mkdir(webPath, { recursive: true });
@@ -26,8 +25,8 @@ for (const file of files) {
 }
 
 await build({
-  entryPoints: [new URL('../native-voice-entry.js', import.meta.url).pathname],
-  outfile: new URL('../www/native-voice.js', import.meta.url).pathname,
+  entryPoints: [fileURLToPath(new URL('../native-voice-entry.js', import.meta.url))],
+  outfile: fileURLToPath(new URL('../www/native-voice.js', import.meta.url)),
   bundle: true,
   minify: true,
   platform: 'browser',
