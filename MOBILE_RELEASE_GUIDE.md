@@ -6,6 +6,7 @@ The repository now contains Capacitor 8 scaffolding for Android and iOS, a nativ
 
 - An Android **debug APK** for device testing.
 - An iOS **Simulator app** for simulator testing.
+- Platform-specific app icons and splash screens generated from the new StudyAI vector logo.
 
 These are preview/test builds. They are not signed store-release packages and are not ready to upload as-is.
 
@@ -22,6 +23,7 @@ These are preview/test builds. They are not signed store-release packages and ar
 npm install
 npm run mobile:prepare
 npx cap add android
+npm run mobile:assets -- --android
 npx cap sync android
 node scripts/patch-native-permissions.mjs android
 \`\`\`
@@ -32,6 +34,7 @@ For iOS, run on macOS:
 npm install
 npm run mobile:prepare
 npx cap add ios
+npm run mobile:assets -- --ios
 npx cap sync ios
 node scripts/patch-native-permissions.mjs ios
 \`\`\`
