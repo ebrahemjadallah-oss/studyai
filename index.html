@@ -263,7 +263,9 @@ function load(){try{const s=JSON.parse(localStorage.getItem('cfg')||'null');if(s
 function save(){try{const prov=$('prov').value;const cfg={prov,url:$('url').value,model:$('model').value,proxyUrl:$('proxyUrl').value.trim(),key:prov==='custom'?$('key').value:''};localStorage.setItem('cfg',JSON.stringify(cfg));$('key').value=cfg.key;$('tst').textContent='✅ تم الحفظ؛ مفاتيح Groq وOpenRouter لا تُحفظ في هذا المتصفح.'}catch(e){$('tst').textContent='تعذر الحفظ'}}
 
 load();
-['dialect','voiceLang'].forEach(id=>$(id).addEventListener('change',()=>{try{localStorage.setItem('studyai-prefs',JSON.stringify({dialect:$('dialect').value,voiceLang:$('voiceLang').value}))}catch(e){}}));
+function saveStudyPreferences(){try{localStorage.setItem('studyai-prefs',JSON.stringify({dialect:$('dialect').value,voiceLang:$('voiceLang').value}))}catch(e){}}
+$('dialect').addEventListener('change',()=>{if($('dialect').value==='english')$('voiceLang').value='en-US';else if($('voiceLang').value==='en-US')$('voiceLang').value='ar-EG';saveStudyPreferences()});
+$('voiceLang').addEventListener('change',saveStudyPreferences);
 async function ai(messages,json){
  const provider=$('prov').value;const headers={'Content-Type':'application/json'};
  let endpoint=$('url').value.replace(/\/$/,'')+'/chat/completions';
