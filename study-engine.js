@@ -741,4 +741,84 @@
     });
   }
 
+  sourceChunks = function (text, maxSize) {
+    const max = maxSize || CHUNK_SIZE;
+    const segments = [];
+    let marker = '';
+    let lines = [];
+
+    function flushSegment() {
+      if (marker || lines.some(function (line) { return line.trim(); })) {
+        segments.push({ marker: marker, text: lines.join('\n').trim() });
+      }
+      lines = [];
+    }
+
+    text.split(/\r?\n/).forEach(function (line) {
+      const found = line.trim().match(/^\[(PAGE|SLIDE):(\d+)\]$/);
+      if (found) {
+        flushSegment();
+        marker = '[' + found[1] + ':' + found[2] + ']';
+      } else {
+        lines.push(line);
+      }
+    });
+    flushSegment();
+
+    const chunks = [];
+    let current = '';
+    function flushChunk() {
+      if (current.trim()) chunks.push(current.trim());
+      current = '';
+    }
+
+    segments.forEach(function (segment) {
+      const prefix = segment.marker ? segment.marker + '\n' : '';
+      const contentLines = segment.text ? segment.text.split('\n') : [];
+      if (!contentLines.length) {
+        const markerBlock = prefix.trim();
+        if (!current) current = markerBlock;
+        else if (current.length + markerBlock.length + 2 <= max) current += '\n\n' + markerBlock;
+        else { flushChunk(); current = markerBlock; }
+        return;
+      }
+
+      const bodyLength = segment.text.length;
+      if (prefix.length + bodyLength <= max) {
+        const block = prefix + segment.text;
+        if (!current) current = block;
+        else if (current.length + block.length + 2 <= max) current += '\n\n' + block;
+        else { flushChunk(); current = block; }
+        return;
+      }
+
+      if (current) flushChunk();
+      let piece = prefix;
+      const capacity = Math.max(1000, max - prefix.length);
+      contentLines.forEach(function (line) {
+        if (line.length > capacity) {
+          if (piece.trim() !== prefix.trim()) {
+            chunks.push(piece.trim());
+            piece = prefix;
+          }
+          for (let offset = 0; offset < line.length; offset += capacity) {
+            const part = line.slice(offset, offset + capacity);
+            if (offset + capacity < line.length) chunks.push((prefix + part).trim());
+            else piece = prefix + part;
+          }
+          return;
+        }
+        if (piece.length + line.length + 1 > max && piece.trim() !== prefix.trim()) {
+          chunks.push(piece.trim());
+          piece = prefix;
+        }
+        piece += (piece.endsWith('\n') || !piece ? '' : '\n') + line;
+      });
+      if (piece.trim()) current = piece;
+    });
+
+    flushChunk();
+    return chunks;
+  };
+
 })();
