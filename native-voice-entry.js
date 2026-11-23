@@ -18,7 +18,7 @@ window.StudyAINativeSpeech = {
 
   async start(language, onTranscript, onError, onState) {
     const availability = await SpeechRecognition.available();
-    if (!availability || !availability.available) {
+    if (!availability || !availability.isAvailable) {
       throw new Error('خدمة التعرف على الكلام غير متاحة على هذا الجهاز.');
     }
 
