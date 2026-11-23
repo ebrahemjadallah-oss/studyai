@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>مذاكرة AI</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f172a">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.7}
+nav{display:flex;gap:4px;overflow-x:auto;background:#1e293b;padding:8px;position:sticky;top:0;z-index:5}
+nav button{flex:none;background:none;border:0;color:#94a3b8;padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
+nav button.on{background:#38bdf8;color:#0f172a;font-weight:700}
+main{max-width:860px;margin:auto;padding:16px}section{display:none}section.on{display:block}
+.card{background:#1e293b;border-radius:12px;padding:14px;margin:10px 0}
+button.b,select,input,textarea{font:inherit;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:8px 12px}
+button.b{background:#38bdf8;color:#0f172a;border:0;font-weight:700;cursor:pointer;margin:4px 0}
+button.b:disabled{opacity:.5}input,textarea,select{width:100%;margin:4px 0}
+.out{white-space:pre-wrap}.q{border-right:4px solid #38bdf8;padding-right:10px;margin:14px 0}
+.opt{display:block;width:100%;text-align:right;margin:4px 0;padding:8px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:inherit;font:inherit;cursor:pointer}
+.ok{background:#14532d!important}.no{background:#7f1d1d!important}
+.slide{min-height:220px;background:#0b1220;border:2px solid #38bdf8;border-radius:14px;padding:24px;font-size:1.2em}
+.slide h2{color:#38bdf8;margin-top:0}.msg{padding:8px 12px;border-radius:10px;margin:6px 0;max-width:90%}
+.me{background:#0369a1;margin-right:auto}.ai{background:#334155}small{color:#94a3b8}
+</style></head><body>
+<nav id="nav"></nav><main>
+<section id="files"><div class="card"><h3>📁 الملفات</h3>
+<input type="file" id="fi" multiple accept=".pdf,.docx,.txt,.md"><small>PDF و Word و نصوص — تقدر ترفع أكتر من ملف</small>
+<textarea id="txt" rows="10" placeholder="أو الصق نص المحاضرة هنا..."></textarea>
+<div id="info"><small></small></div></div></section>
+
+<section id="org"><div class="card"><h3>🗂️ إعادة ترتيب المحاضرة</h3>
+<select id="orgMode"><option>ملخص منظم بعناوين</option><option>خريطة مفاهيم نصية</option><option>أسئلة وأجوبة مراجعة</option><option>شرح مبسط للمبتدئين</option></select>
+<button class="b" onclick="organize()">نظّم</button><div id="orgOut" class="out"></div></div></section>
+
+<section id="quiz"><div class="card"><h3>📝 اختبار كامل</h3>
+<input id="qn" type="number" value="10" min="3" max="40">
+<button class="b" onclick="makeQuiz()">أنشئ الاختبار</button><div id="quizOut"></div></div></section>
+
+<section id="vid"><div class="card"><h3>🎬 فيديو شرح</h3>
+<input id="vn" type="number" value="6" min="3" max="15"><button class="b" onclick="makeVideo()">أنشئ الفيديو</button>
+<div id="vidOut"></div></div></section>
+
+<section id="voice"><div class="card"><h3>🎙️ محادثة صوتية</h3>
+<button class="b" id="mic" onclick="toggleMic()">🎤 ابدأ الكلام</button>
+<input id="vtext" placeholder="أو اكتب سؤالك واضغط Enter" onkeydown="if(event.key==='Enter'){chat(this.value);this.value=''}">
+<div id="chat"></div></div></section>
+
+<section id="set"><div class="card"><h3>⚙️ الإعدادات</h3>
+<label>مزود الذكاء الاصطناعي</label>
+<select id="prov" onchange="presets()"><option value="ollama">Ollama (على جهازك)</option><option value="groq">Groq (سحابي)</option><option value="openrouter">OpenRouter (سحابي)</option><option value="custom">مخصص (OpenAI-compatible)</option></select>
+<label>رابط الـ API</label><input id="url"><label>اسم النموذج</label><input id="model">
+<label>المفتاح (للسحابي فقط)</label><input id="key" type="password">
+<button class="b" onclick="save()">حفظ</button> <button class="b" onclick="test()">اختبار الاتصال</button><div id="tst"></div>
+<small>Ollama: شغّله بالأمر <code>OLLAMA_ORIGINS=* ollama serve</code> وحمّل نموذج يدعم العربي مثل <code>qwen2.5:7b</code>. المفاتيح محفوظة في متصفحك فقط.</small></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const tabs=[['files','الملفات'],['org','تنظيم'],['quiz','اختبار'],['vid','فيديو'],['voice','صوت'],['set','الإعدادات']];
+$('nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
+function show(t){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===t));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t))}
+$('nav').onclick=e=>e.target.dataset.t&&show(e.target.dataset.t);show('files');
+const P={ollama:['http://localhost:11434/v1','qwen2.5:7b'],groq:['https://api.groq.com/openai/v1','llama-3.3-70b-versatile'],openrouter:['https://openrouter.ai/api/v1','meta-llama/llama-3.3-70b-instruct:free'],custom:['','']};
+function presets(){const p=P[$('prov').value];$('url').value=p[0];$('model').value=p[1]}
+function load(){try{const s=JSON.parse(localStorage.getItem('cfg')||'null');if(s){$('prov').value=s.prov;$('url').value=s.url;$('model').value=s.model;$('key').value=s.key;return}}catch(e){}presets()}
+function save(){try{localStorage.setItem('cfg',JSON.stringify({prov:$('prov').value,url:$('url').value,model:$('model').value,key:$('key').value}));$('tst').textContent='✅ تم الحفظ'}catch(e){$('tst').textContent='تعذر الحفظ'}}
+load();
+async function ai(messages,json){
+ const h={'Content-Type':'application/json'};if($('key').value)h.Authorization='Bearer '+$('key').value;
+ const r=await fetch($('url').value.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:h,body:JSON.stringify({model:$('model').value,messages,temperature:.4})});
+ if(!r.ok)throw new Error('خطأ '+r.status+' من مزود الذكاء الاصطناعي');
+ const d=await r.json();return d.choices[0].message.content}
+async function test(){$('tst').textContent='...';try{$('tst').textContent='✅ '+await ai([{role:'user',content:'قل مرحبا بكلمة واحدة'}])}catch(e){$('tst').textContent='❌ '+e.message+' (تأكد من الرابط والمفتاح وإعدادات CORS)'}}
+const SYS='أنت مساعد دراسي خبير. أجب دائماً بالعربية الفصحى المبسطة مع إبقاء المصطلحات العلمية بالإنجليزية بين قوسين.';
+function src(){const t=$('txt').value.trim();if(!t){alert('ارفع ملفاً أو الصق نصاً أولاً');throw 0}return t.slice(0,14000)}
+$('fi').onchange=async e=>{let all=$('txt').value;$('info').innerText='جاري القراءة...';
+ for(const f of e.target.files){try{const n=f.name.toLowerCase();let t='';
+  if(n.endsWith('.pdf')){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+   const d=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;for(let i=1;i<=d.numPages;i++){const c=await(await d.getPage(i)).getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n'}}
+  else if(n.endsWith('.docx'))t=(await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value;
+  else t=await f.text();
+  all+='\n\n--- '+f.name+' ---\n'+t}catch(x){all+='\n[تعذر قراءة '+f.name+']'}}
+ $('txt').value=all.trim();$('info').innerText='تم: '+all.length+' حرف';};
+async function run(btn,out,fn){btn.disabled=true;out.innerHTML='⏳ جاري المعالجة...';try{await fn()}catch(e){if(e)out.textContent='❌ '+(e.message||e)}btn.disabled=false}
+function organize(){run(event.target,$('orgOut'),async()=>{$('orgOut').textContent=await ai([{role:'system',content:SYS},{role:'user',content:`أعد ترتيب وتنظيم هذه المحاضرة في شكل: ${$('orgMode').value}. استخدم عناوين وترقيم واضح ولا تحذف معلومة مهمة.\n\n${src()}`}])})}
+function pj(s){return JSON.parse(s.slice(s.search(/[\[{]/),Math.max(s.lastIndexOf('}'),s.lastIndexOf(']'))+1))}
+function makeQuiz(){run(event.target,$('quizOut'),async()=>{
+ const r=await ai([{role:'system',content:SYS+' أجب بـ JSON فقط بدون أي نص آخر.'},{role:'user',content:`أنشئ ${$('qn').value} سؤال متنوع من هذه المادة بأنواع: mcq (4 اختيارات) و tf (صح/خطأ) و fill (أكمل) و essay (مقالي). الصيغة: {"questions":[{"type":"mcq","q":"..","options":["..",".."],"answer":0,"explain":".."},{"type":"tf","q":"..","answer":true,"explain":".."},{"type":"fill","q":"..._____..","answer":"..","explain":".."},{"type":"essay","q":"..","answer":"إجابة نموذجية"}]}\n\n${src()}`}]);
+ const qs=pj(r).questions;let sc=0,done=0;const o=$('quizOut');o.innerHTML='<div id="score"></div>';
+ qs.forEach((q,i)=>{const d=document.createElement('div');d.className='q';d.innerHTML=`<b>${i+1}) ${q.q}</b>`;
+  const fin=(ok)=>{if(ok)sc++;done++;$('score').innerHTML=`<b>النتيجة: ${sc} (أُجيب ${done}/${qs.length})</b>`};
+  const exp=t=>{const x=document.createElement('div');x.innerHTML='<small>'+t+'</small>';d.append(x)};
+  if(q.type==='mcq'||q.type==='tf'){const opts=q.type==='tf'?['صح','خطأ']:q.options;const ans=q.type==='tf'?(q.answer?0:1):q.answer;
+   opts.forEach((t,j)=>{const b=document.createElement('button');b.className='opt';b.textContent=t;b.onclick=()=>{if(d.dataset.d)return;d.dataset.d=1;b.classList.add(j===ans?'ok':'no');d.querySelectorAll('.opt')[ans].classList.add('ok');fin(j===ans);exp(q.explain||'')};d.append(b)})}
+  else{const bt=document.createElement('button');bt.className='b';bt.textContent='أظهر الإجابة';bt.onclick=()=>{bt.remove();exp('✅ '+q.answer+(q.explain?'<br>'+q.explain:''))};d.append(bt)}
+  o.append(d)})})}
+let slides=[],cur=0,playing=false;
+function makeVideo(){run(event.target,$('vidOut'),async()=>{
+ const r=await ai([{role:'system',content:SYS+' أجب بـ JSON فقط.'},{role:'user',content:`حوّل المحاضرة إلى فيديو شرح من ${$('vn').value} شرائح. لكل شريحة تعليق صوتي شارح بأسلوب مدرس ودود. الصيغة: {"slides":[{"title":"..","bullets":["..",".."],"narration":".."}]}\n\n${src()}`}]);
+ slides=pj(r).slides;cur=0;$('vidOut').innerHTML='<div id="sl" class="slide"></div><button class="b" onclick="playV()">▶️ تشغيل</button> <button class="b" onclick="stopV()">⏹️ إيقاف</button> <button class="b" onclick="go(-1)">السابق</button> <button class="b" onclick="go(1)">التالي</button>';draw()})}
+function draw(){const s=slides[cur];$('sl').innerHTML=`<h2>${s.title}</h2><ul>${s.bullets.map(b=>'<li>'+b+'</li>').join('')}</ul><small>${cur+1}/${slides.length}</small>`}
+function go(n){cur=Math.min(slides.length-1,Math.max(0,cur+n));draw()}
+function say(t,cb){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ar-SA';u.onend=cb;speechSynthesis.speak(u)}
+function playV(){playing=true;(function n(){if(!playing)return;draw();say(slides[cur].narration,()=>{if(playing&&cur<slides.length-1){cur++;n()}else playing=false})})()}
+function stopV(){playing=false;speechSynthesis.cancel()}
+let hist=[],rec=null,on=false;
+function add(c,t){const d=document.createElement('div');d.className='msg '+c;d.textContent=t;$('chat').append(d);d.scrollIntoView()}
+async function chat(t){if(!t)return;add('me',t);hist.push({role:'user',content:t});
+ try{const ctx=$('txt').value.trim().slice(0,8000);const a=await ai([{role:'system',content:SYS+' ردودك قصيرة ومناسبة للكلام.'+(ctx?'\nمادة الطالب:\n'+ctx:'')},...hist.slice(-10)]);hist.push({role:'assistant',content:a});add('ai',a);say(a.replace(/[*#_`]/g,''))}catch(e){add('ai','❌ '+e.message)}}
+function toggleMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return alert('المتصفح لا يدعم التعرف على الصوت. جرّب Chrome أو Edge.');
+ if(on){rec.stop();return}rec=new SR();rec.lang='ar-EG';rec.onresult=e=>chat(e.results[0][0].transcript);
+ rec.onstart=()=>{on=true;$('mic').textContent='🔴 بسمعك... (اضغط للإيقاف)'};rec.onend=()=>{on=false;$('mic').textContent='🎤 ابدأ الكلام'};rec.start()}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
