@@ -515,26 +515,11 @@
   function groupNotesByCount(notes, requestedGroups) {
     const groupCount = Math.max(1, Math.min(requestedGroups, notes.length));
     const groups = [];
-    const totalLength = notes.reduce(function (sum, note) { return sum + note.length; }, 0);
-    const targetLength = totalLength / groupCount;
-    let current = [];
-    let currentLength = 0;
-    let consumed = 0;
-
-    notes.forEach(function (note, index) {
-      const groupsLeft = groupCount - groups.length;
-      const notesLeft = notes.length - index;
-      if (current.length && groupsLeft > 1 && notesLeft >= groupsLeft &&
-          currentLength >= targetLength && currentLength + note.length > targetLength * 0.72) {
-        groups.push(current.join('\n\n'));
-        current = [];
-        currentLength = 0;
-      }
-      current.push(note);
-      currentLength += note.length;
-      consumed += note.length;
-    });
-    if (current.length) groups.push(current.join('\n\n'));
+    for (let i = 0; i < groupCount; i++) {
+      const start = Math.floor(i * notes.length / groupCount);
+      const end = Math.floor((i + 1) * notes.length / groupCount);
+      groups.push(notes.slice(start, end).join('\n\n'));
+    }
     return groups;
   }
 
