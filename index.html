@@ -3,6 +3,7 @@
 <link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f172a">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.7}
 nav{display:flex;gap:4px;overflow-x:auto;background:#1e293b;padding:8px;position:sticky;top:0;z-index:5}
@@ -22,20 +23,20 @@ button.b:disabled{opacity:.5}input,textarea,select{width:100%;margin:4px 0}
 </style></head><body>
 <nav id="nav"></nav><main>
 <section id="files"><div class="card"><h3>📁 الملفات</h3>
-<input type="file" id="fi" multiple accept=".pdf,.docx,.txt,.md"><small>PDF و Word و نصوص — تقدر ترفع أكتر من ملف</small>
+<input type="file" id="fi" multiple accept=".pdf,.docx,.txt,.md"><small>PDF و Word و PowerPoint ونصوص — تقدر ترفع أكتر من ملف</small>
 <textarea id="txt" rows="10" placeholder="أو الصق نص المحاضرة هنا..."></textarea>
 <div id="info"><small></small></div></div></section>
 
 <section id="org"><div class="card"><h3>🗂️ إعادة ترتيب المحاضرة</h3>
 <select id="orgMode"><option>ملخص منظم بعناوين</option><option>خريطة مفاهيم نصية</option><option>أسئلة وأجوبة مراجعة</option><option>شرح مبسط للمبتدئين</option></select>
-<button class="b" onclick="organize()">نظّم</button><div id="orgOut" class="out"></div></div></section>
+<button class="b" onclick="organize(this)">نظّم</button><div id="orgOut" class="out"></div></div></section>
 
 <section id="quiz"><div class="card"><h3>📝 اختبار كامل</h3>
 <input id="qn" type="number" value="10" min="3" max="40">
-<button class="b" onclick="makeQuiz()">أنشئ الاختبار</button><div id="quizOut"></div></div></section>
+<button class="b" onclick="makeQuiz(this)">أنشئ الاختبار</button><div id="quizOut"></div></div></section>
 
 <section id="vid"><div class="card"><h3>🎬 فيديو شرح</h3>
-<input id="vn" type="number" value="6" min="3" max="15"><button class="b" onclick="makeVideo()">أنشئ الفيديو</button>
+<input id="vn" type="number" value="6" min="3" max="15"><button class="b" onclick="makeVideo(this)">أنشئ الفيديو</button>
 <div id="vidOut"></div></div></section>
 
 <section id="voice"><div class="card"><h3>🎙️ محادثة صوتية</h3>
@@ -108,4 +109,5 @@ function toggleMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecog
  if(on){rec.stop();return}rec=new SR();rec.lang='ar-EG';rec.onresult=e=>chat(e.results[0][0].transcript);
  rec.onstart=()=>{on=true;$('mic').textContent='🔴 بسمعك... (اضغط للإيقاف)'};rec.onend=()=>{on=false;$('mic').textContent='🎤 ابدأ الكلام'};rec.start()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-</script></body></html>
+</script><script src="study-engine.js"></script>
+</body></html>
