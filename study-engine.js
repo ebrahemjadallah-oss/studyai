@@ -344,6 +344,9 @@
 
   $('fi').accept = '.pdf,.docx,.txt,.md,.pptx';
   $('fi').onchange = async function (event) {
+    activeMaterialId = null;
+    activeMaterialTitle = Array.from(event.target.files || []).map(function (file) { return file.name; }).join('، ') || 'محاضرة جديدة';
+    if ($('saveMaterial')) $('saveMaterial').textContent = 'حفظ المحاضرة في مكتبتي';
     let all = $('txt').value;
     const notices = [];
     $('info').textContent = 'جاري قراءة الملفات...';
@@ -365,9 +368,14 @@
             else {
               imagePages++;
               if ($('enableOcr') && $('enableOcr').checked) {
-                const recognized = await recognizePdfPage(page, pageNo, $('info'));
-                if (recognized) extracted += '[OCR عربي + English]\n' + recognized + '\n';
-                else extracted += '[تعذر التعرف على النص في هذه الصفحة؛ راجع الصورة يدويًا]\n';
+                try {
+                  const recognized = await recognizePdfPage(page, pageNo, $('info'));
+                  if (recognized) extracted += '[OCR عربي + English]\n' + recognized + '\n';
+                  else extracted += '[تعذر التعرف على النص في هذه الصفحة؛ راجع الصورة يدويًا]\n';
+                } catch (ocrError) {
+                  extracted += '[فشل OCR في الصفحة ' + pageNo + ': ' + (ocrError.message || 'خطأ غير معروف') + ']\n';
+                  notices.push(file.name + ': فشل OCR في الصفحة ' + pageNo);
+                }
               } else {
                 extracted += '[صفحة مصوّرة؛ OCR غير مفعّل]\n';
               }
