@@ -8,7 +8,8 @@
     "mobile:sync:android": "npm run mobile:prepare && cap sync android",
     "mobile:sync:ios": "npm run mobile:prepare && cap sync ios",
     "mobile:open:android": "npm run mobile:sync:android && cap open android",
-    "mobile:open:ios": "npm run mobile:sync:ios && cap open ios"
+    "mobile:open:ios": "npm run mobile:sync:ios && cap open ios",
+    "mobile:assets": "capacitor-assets generate --iconBackgroundColor '#101b2f' --iconBackgroundColorDark '#101b2f' --splashBackgroundColor '#f3f6fb' --splashBackgroundColorDark '#101b2f'"
   },
   "dependencies": {
     "@capgo/capacitor-speech-recognition": "8.6.0",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.2",
-    "esbuild": "^0.25.12"
+    "esbuild": "^0.25.12",
+    "@capacitor/assets": "4.0.0"
   }
 }
