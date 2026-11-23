@@ -9,30 +9,47 @@
 
   function sourceChunks(text, maxSize) {
     const max = maxSize || CHUNK_SIZE;
-    const lines = text.split(/\n/);
+    const lines = text.split(/\r?\n/);
     const chunks = [];
     let current = '';
+    let activeMarker = '';
+
+    function prefix() { return activeMarker ? activeMarker + '\n' : ''; }
     function pushCurrent() {
       const value = current.trim();
       if (value) chunks.push(value);
       current = '';
     }
+
     for (const line of lines) {
-      if (line.length > max) {
+      const marker = line.trim().match(/^\[(PAGE|SLIDE):(\d+)\]$/);
+      if (marker) {
         pushCurrent();
-        for (let i = 0; i < line.length; i += max) {
-          const part = line.slice(i, i + max).trim();
-          if (part) chunks.push(part);
+        activeMarker = '[' + marker[1] + ':' + marker[2] + ']';
+        current = prefix();
+        continue;
+      }
+
+      const available = Math.max(1000, max - prefix().length);
+      if (line.length > available) {
+        pushCurrent();
+        let offset = 0;
+        while (offset < line.length) {
+          const piece = line.slice(offset, offset + available);
+          offset += available;
+          if (offset < line.length) chunks.push((prefix() + piece).trim());
+          else current = prefix() + piece;
         }
         continue;
       }
+
       if (current.length + line.length + 1 > max) pushCurrent();
-      current += (current ? '\n' : '') + line;
+      if (!current) current = prefix();
+      current += (current.endsWith('\n') || !current ? '' : '\n') + line;
     }
     pushCurrent();
     return chunks;
   }
-
   function sourceLabel(text) {
     const found = [];
     const re = /\[(?:PAGE|SLIDE):(\d+)\]/g;
