@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { SpeechRecognition } from '@capgo/capacitor-speech-recognition';
+import { SpeechSynthesis } from '@capgo/capacitor-speech-synthesis';
 
 let partialListener = null;
 let errorListener = null;
@@ -70,5 +71,36 @@ window.StudyAINativeSpeech = {
       }
     }
     return transcript;
+  },
+
+  async speak(text, language) {
+    const lang = language || 'ar-EG';
+    const availability = await SpeechSynthesis.isAvailable();
+    if (!availability || !availability.available) {
+      throw new Error('ميزة النطق غير متاحة على هذا الجهاز.');
+    }
+    let voices = [];
+    try {
+      const result = await SpeechSynthesis.getVoices();
+      voices = result && Array.isArray(result.voices) ? result.voices : [];
+    } catch (error) {
+      voices = [];
+    }
+    const exact = voices.find(voice => (voice.language || '').toLowerCase() === lang.toLowerCase());
+    const regional = voices.find(voice => (voice.language || '').toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+    const selected = exact || regional || null;
+    return SpeechSynthesis.speak({
+      text: String(text || ''),
+      language: selected ? selected.language : lang,
+      voiceId: selected ? selected.id : undefined,
+      rate: 0.92,
+      pitch: 1,
+      volume: 1,
+      queueStrategy: 'Flush'
+    });
+  },
+
+  async stopSpeaking() {
+    return SpeechSynthesis.cancel();
   }
 };
