@@ -192,6 +192,8 @@ small{color:var(--muted);font-size:10px}
     <p>PDF · Word · PowerPoint · TXT · Markdown</p>
     <input type="file" id="fi" multiple accept=".pdf,.docx,.txt,.md,.pptx">
   </div>
+  <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="enableOcr" type="checkbox" checked style="width:auto;margin:0"> محاولة قراءة الصفحات المصوّرة (OCR عربي + English)</label>
+  <small>تعمل المعالجة داخل جهازك بعد تحميل نموذج OCR أول مرة، وقد تستغرق وقتًا على الملفات الكبيرة.</small>
   <label for="txt">نص المحاضرة أو النص المستخرج</label>
   <textarea id="txt" rows="10" placeholder="يمكنك أيضًا لصق نص المحاضرة هنا..."></textarea>
   <button class="b" id="saveMaterial">حفظ المحاضرة في مكتبتي</button>
