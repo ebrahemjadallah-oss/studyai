@@ -361,8 +361,14 @@
             extracted += '\n[PAGE:' + pageNo + ']\n';
             if (pageText) extracted += pageText + '\n';
             else {
-              extracted += '[لا يوجد نص قابل للاستخراج من هذه الصفحة؛ قد تكون الصفحة صورة ممسوحة ضوئيًا وتحتاج OCR]\n';
               imagePages++;
+              if ($('enableOcr') && $('enableOcr').checked) {
+                const recognized = await recognizePdfPage(page, pageNo, $('info'));
+                if (recognized) extracted += '[OCR عربي + English]\n' + recognized + '\n';
+                else extracted += '[تعذر التعرف على النص في هذه الصفحة؛ راجع الصورة يدويًا]\n';
+              } else {
+                extracted += '[صفحة مصوّرة؛ OCR غير مفعّل]\n';
+              }
             }
           }
           if (imagePages) notices.push(file.name + ': ' + imagePages + ' صفحة قد تحتاج OCR');
@@ -395,6 +401,9 @@
       }
     }
     $('txt').value = all.trim();
+    if (typeof saveMaterialRecord === 'function' && $('txt').value) {
+      try { await saveMaterialRecord($('txt').value, Array.from(event.target.files).map(function (file) { return file.name; }).join('، ') || 'محاضرة ملصوقة'); } catch (storageError) { notices.push('تعذر الحفظ المحلي: ' + storageError.message); }
+    }
     const total = $('txt').value.length;
     $('info').textContent = 'تم استخراج ' + total.toLocaleString('en-US') + ' حرف من الملفات المحددة. ' +
       (notices.length ? 'تنبيه: ' + notices.join('؛ ') + '. ' : '') +
@@ -804,6 +813,361 @@
 
     flushChunk();
     return chunks;
+  };
+
+  const DB_NAME = 'studyai-library';
+  const DB_VERSION = 1;
+  let databasePromise = null;
+  let activeMaterialId = null;
+  let activeMaterialTitle = 'محاضرة جديدة';
+  let ocrWorkerPromise = null;
+
+  function openStudyDatabase() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('هذا المتصفح لا يدعم التخزين المحلي المتقدم.'));
+    if (databasePromise) return databasePromise;
+    databasePromise = new Promise(function (resolve, reject) {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = function () {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('materials')) db.createObjectStore('materials', { keyPath: 'id', autoIncrement: true });
+        if (!db.objectStoreNames.contains('artifacts')) db.createObjectStore('artifacts', { keyPath: 'id', autoIncrement: true });
+      };
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { reject(request.error || new Error('تعذر فتح المكتبة المحلية.')); };
+    });
+    return databasePromise;
+  }
+
+  async function storeRecord(storeName, record) {
+    const db = await openStudyDatabase();
+    return new Promise(function (resolve, reject) {
+      const transaction = db.transaction(storeName, 'readwrite');
+      const request = transaction.objectStore(storeName).put(record);
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { reject(request.error || new Error('تعذر حفظ العنصر.')); };
+    });
+  }
+
+  async function readRecords(storeName) {
+    const db = await openStudyDatabase();
+    return new Promise(function (resolve, reject) {
+      const request = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
+      request.onsuccess = function () { resolve(request.result || []); };
+      request.onerror = function () { reject(request.error || new Error('تعذر قراءة المكتبة.')); };
+    });
+  }
+
+  async function removeRecord(storeName, id) {
+    const db = await openStudyDatabase();
+    return new Promise(function (resolve, reject) {
+      const request = db.transaction(storeName, 'readwrite').objectStore(storeName).delete(Number(id));
+      request.onsuccess = function () { resolve(true); };
+      request.onerror = function () { reject(request.error || new Error('تعذر حذف العنصر.')); };
+    });
+  }
+
+  async function saveMaterialRecord(text, title) {
+    const record = {
+      id: activeMaterialId || undefined,
+      title: title || activeMaterialTitle || 'محاضرة بدون عنوان',
+      text: text,
+      chars: text.length,
+      updatedAt: Date.now(),
+      createdAt: Date.now()
+    };
+    const id = await storeRecord('materials', record);
+    activeMaterialId = id;
+    activeMaterialTitle = record.title;
+    const button = $('saveMaterial');
+    if (button) button.textContent = '✓ تم الحفظ في مكتبتي';
+    return id;
+  }
+
+  async function saveStudyArtifact(type, title, content, extraData) {
+    const record = Object.assign({
+      type: type,
+      title: title,
+      content: content,
+      materialId: activeMaterialId,
+      createdAt: Date.now()
+    }, extraData || {});
+    return storeRecord('artifacts', record);
+  }
+
+  function clearNode(node) {
+    while (node && node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function textNode(parent, tag, text, className) {
+    const node = document.createElement(tag);
+    node.textContent = text == null ? '' : String(text);
+    if (className) node.className = className;
+    parent.appendChild(node);
+    return node;
+  }
+
+  function actionButton(parent, label, callback, className) {
+    const button = textNode(parent, 'button', label, className || 'b button secondary');
+    button.type = 'button';
+    button.addEventListener('click', callback);
+    return button;
+  }
+
+  window.openSavedMaterial = async function (id) {
+    try {
+      const items = await readRecords('materials');
+      const item = items.find(function (entry) { return Number(entry.id) === Number(id); });
+      if (!item) throw new Error('لم يتم العثور على المحاضرة.');
+      $('txt').value = item.text;
+      activeMaterialId = item.id;
+      activeMaterialTitle = item.title;
+      const button = $('saveMaterial');
+      if (button) button.textContent = '✓ محفوظة في مكتبتي';
+      if (typeof show === 'function') show('files');
+      $('info').textContent = 'تم فتح: ' + item.title + ' — ' + item.chars.toLocaleString('en-US') + ' حرف';
+    } catch (error) {
+      alert('تعذر فتح المحاضرة: ' + error.message);
+    }
+  };
+
+  window.deleteSavedItem = async function (storeName, id) {
+    if (!confirm('هل تريد حذف هذا العنصر من هذا الجهاز؟')) return;
+    try {
+      await removeRecord(storeName, id);
+      if (storeName === 'materials' && Number(activeMaterialId) === Number(id)) {
+        activeMaterialId = null;
+        activeMaterialTitle = 'محاضرة جديدة';
+      }
+      await window.refreshLibrary();
+      await window.refreshReview();
+    } catch (error) {
+      alert('تعذر الحذف: ' + error.message);
+    }
+  };
+
+  window.refreshLibrary = async function () {
+    const output = $('libraryOut');
+    if (!output) return;
+    clearNode(output);
+    try {
+      const materials = (await readRecords('materials')).sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+      const artifacts = (await readRecords('artifacts')).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      textNode(output, 'h4', 'المحاضرات (' + materials.length + ')');
+      if (!materials.length) textNode(output, 'p', 'لم تحفظ أي محاضرة بعد. ارفع ملفًا ثم اضغط حفظ في مكتبتي.');
+      materials.forEach(function (item) {
+        const row = document.createElement('div');
+        row.className = 'q';
+        textNode(row, 'b', item.title || 'محاضرة بدون عنوان');
+        textNode(row, 'small', (item.chars || 0).toLocaleString('en-US') + ' حرف · آخر تعديل ' + new Date(item.updatedAt).toLocaleString('ar-EG'));
+        actionButton(row, 'فتح المحاضرة', function () { window.openSavedMaterial(item.id); });
+        actionButton(row, 'حذف', function () { window.deleteSavedItem('materials', item.id); });
+        output.appendChild(row);
+      });
+      textNode(output, 'h4', 'مخرجات المذاكرة (' + artifacts.length + ')');
+      if (!artifacts.length) textNode(output, 'p', 'ستظهر هنا الملخصات والاختبارات وشرائح الشرح وبطاقات الحفظ التي تنشئها.');
+      artifacts.forEach(function (item) {
+        const row = document.createElement('div');
+        row.className = 'q';
+        const kind = { summary: 'ملخص', quiz: 'اختبار', slides: 'شرائح شرح', flashcard: 'بطاقة حفظ' }[item.type] || 'مادة';
+        textNode(row, 'b', kind + ' · ' + item.title);
+        textNode(row, 'small', new Date(item.createdAt).toLocaleString('ar-EG'));
+        actionButton(row, 'عرض', function () {
+          const content = typeof item.content === 'string' ? item.content : JSON.stringify(item.content, null, 2);
+          const detail = document.createElement('pre');
+          detail.className = 'out';
+          detail.textContent = content;
+          row.appendChild(detail);
+        });
+        actionButton(row, 'حذف', function () { window.deleteSavedItem('artifacts', item.id); });
+        output.appendChild(row);
+      });
+    } catch (error) {
+      textNode(output, 'p', 'تعذر فتح المكتبة: ' + error.message);
+    }
+  };
+
+  window.refreshReview = async function () {
+    const output = $('reviewOut');
+    if (!output) return;
+    clearNode(output);
+    try {
+      const cards = (await readRecords('artifacts'))
+        .filter(function (item) { return item.type === 'flashcard'; })
+        .sort(function (a, b) { return (a.dueAt || 0) - (b.dueAt || 0); });
+      const due = cards.filter(function (item) { return (item.dueAt || 0) <= Date.now(); });
+      textNode(output, 'p', 'إجمالي البطاقات: ' + cards.length + ' · المستحقة الآن: ' + due.length);
+      if (!due.length) {
+        textNode(output, 'div', cards.length ? 'أحسنت! لا توجد بطاقات مستحقة الآن. ارجع في موعد المراجعة القادم.' : 'لا توجد بطاقات بعد. أنشئ بطاقات حفظ من استوديو الفهم.');
+        return;
+      }
+      const card = due[0];
+      const panel = document.createElement('div');
+      panel.className = 'slide';
+      textNode(panel, 'small', 'بطاقة ' + (1) + ' من ' + due.length + ' · ' + (card.source || 'مصدر المحاضرة'));
+      textNode(panel, 'h2', card.title || 'سؤال مراجعة');
+      const reveal = actionButton(panel, 'إظهار الإجابة', function () {
+        if (panel.querySelector('.review-answer')) return;
+        textNode(panel, 'div', card.content || '', 'review-answer');
+        textNode(panel, 'small', 'كيف كان تذكّرك للإجابة؟');
+        const ratings = document.createElement('div');
+        ratings.className = 'hero-actions';
+        actionButton(ratings, 'صعبة · غدًا', function () { window.rateFlashcard(card.id, 'hard'); });
+        actionButton(ratings, 'جيدة · بعد يومين', function () { window.rateFlashcard(card.id, 'good'); });
+        actionButton(ratings, 'سهلة · بعد 4 أيام', function () { window.rateFlashcard(card.id, 'easy'); });
+        panel.appendChild(ratings);
+      });
+      output.appendChild(panel);
+    } catch (error) {
+      textNode(output, 'p', 'تعذر تحميل المراجعة: ' + error.message);
+    }
+  };
+
+  window.rateFlashcard = async function (id, rating) {
+    try {
+      const cards = await readRecords('artifacts');
+      const card = cards.find(function (item) { return Number(item.id) === Number(id); });
+      if (!card) throw new Error('البطاقة غير موجودة.');
+      const oldInterval = Number(card.intervalDays || 0);
+      const nextInterval = rating === 'hard' ? Math.max(1, Math.round(oldInterval * 1.2)) :
+        rating === 'good' ? (oldInterval ? Math.round(oldInterval * 2) : 2) :
+        (oldInterval ? Math.round(oldInterval * 2.5) : 4);
+      card.intervalDays = Math.min(45, nextInterval);
+      card.dueAt = Date.now() + card.intervalDays * 24 * 60 * 60 * 1000;
+      card.reviewedAt = Date.now();
+      card.lastRating = rating;
+      await storeRecord('artifacts', card);
+      await window.refreshReview();
+    } catch (error) {
+      alert('تعذر تحديث موعد البطاقة: ' + error.message);
+    }
+  };
+
+  window.makeFlashcards = function (button) {
+    const text = sourceText();
+    if (!text) { alert('ارفع محاضرة أولًا.'); return; }
+    const output = $('flashOut');
+    runTask(button, output, async function () {
+      const notes = await extractNotesForAll(text, output, 'استخراج بطاقات سؤال وجواب للمذاكرة');
+      const groups = groupNotesByCount(notes, Math.min(10, Math.max(1, Math.ceil(notes.length / 2))));
+      let saved = 0;
+      for (let i = 0; i < groups.length; i++) {
+        output.textContent = 'إنشاء بطاقات الجزء ' + (i + 1) + ' من ' + groups.length;
+        const prompt = 'أنشئ بطاقات حفظ من نوع سؤال وإجابة من النص التالي فقط. أنشئ بطاقتين إلى أربع بطاقات لهذا الجزء. ركّز على التعريفات والمصطلحات والمقارنات والأرقام والخطوات. تجنب الأسئلة العامة جدًا. أرفق الصفحة عند توفرها. أخرج JSON فقط بهذا الشكل: {"cards":[{"question":"السؤال","answer":"إجابة دقيقة","source":"الصفحة 3"}]}.\n\n' + groups[i];
+        const raw = await ai([
+          { role: 'system', content: 'أنت خبير في تصميم بطاقات المراجعة. لا تضف معلومة من خارج المصدر، وأخرج JSON صالحًا فقط.' },
+          { role: 'user', content: prompt }
+        ]);
+        const data = cleanJson(raw);
+        const cards = Array.isArray(data.cards) ? data.cards : [];
+        for (const item of cards) {
+          if (!item.question || !item.answer) continue;
+          await saveStudyArtifact('flashcard', item.question, item.answer, {
+            source: item.source || 'من المحاضرة',
+            dueAt: Date.now(),
+            intervalDays: 0
+          });
+          saved++;
+        }
+      }
+      output.textContent = 'تم حفظ ' + saved + ' بطاقة في مراجعتك اليومية. افتح قسم المراجعة لبدء التدريب.';
+      await window.refreshReview();
+      await window.refreshLibrary();
+    });
+  };
+
+  const saveButton = $('saveMaterial');
+  if (saveButton) {
+    saveButton.addEventListener('click', async function () {
+      const text = sourceText();
+      if (!text) { alert('لا توجد محاضرة لحفظها.'); return; }
+      try {
+        const title = activeMaterialTitle === 'محاضرة جديدة' ? 'محاضرة ' + new Date().toLocaleDateString('ar-EG') : activeMaterialTitle;
+        await saveMaterialRecord(text, title);
+        $('info').textContent = 'تم حفظ المحاضرة في مكتبتك المحلية على هذا الجهاز.';
+        await window.refreshLibrary();
+      } catch (error) {
+        $('info').textContent = 'تعذر الحفظ المحلي: ' + error.message;
+      }
+    });
+  }
+
+  async function loadOcrEngine() {
+    if (window.Tesseract) return;
+    await new Promise(function (resolve, reject) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = function () { reject(new Error('تعذر تحميل محرك OCR؛ تحقق من الاتصال بالإنترنت.')); };
+      document.head.appendChild(script);
+    });
+    if (!window.Tesseract) throw new Error('محرك OCR غير متاح.');
+  }
+
+  async function getOcrWorker(statusNode) {
+    if (!ocrWorkerPromise) {
+      ocrWorkerPromise = (async function () {
+        await loadOcrEngine();
+        return window.Tesseract.createWorker('ara+eng', 1, {
+          logger: function (message) {
+            if (statusNode && message && typeof message.progress === 'number') {
+              statusNode.textContent = 'OCR عربي + English: ' + Math.round(message.progress * 100) + '%';
+            }
+          }
+        });
+      })().catch(function (error) {
+        ocrWorkerPromise = null;
+        throw error;
+      });
+    }
+    return ocrWorkerPromise;
+  }
+
+  async function recognizePdfPage(page, pageNo, statusNode) {
+    const viewport = page.getViewport({ scale: 1.6 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+    const worker = await getOcrWorker(statusNode);
+    if (statusNode) statusNode.textContent = 'قراءة الصفحة المصوّرة رقم ' + pageNo + ' باستخدام OCR عربي + English...';
+    const result = await worker.recognize(canvas);
+    canvas.width = 0;
+    canvas.height = 0;
+    return result && result.data && result.data.text ? result.data.text.trim() : '';
+  }
+
+  window.chat = async function (question) {
+    const text = sourceText();
+    if (!question || !question.trim()) return;
+    if (typeof add === 'function') add('me', question);
+    else appendText($('chat'), 'div', question, 'msg me');
+    conversation.push({ role: 'user', content: question });
+    try {
+      const context = text ? retrieveContext(question, text) : '';
+      const dialect = $('dialect') ? $('dialect').value : 'egyptian';
+      const languageRule = dialect === 'egyptian'
+        ? 'اتكلم بالعامية المصرية الطبيعية والسلسة، كأنك مدرس مصري بيشرح لطالب. استخدم تعبيرات مصرية مفهومة من غير مبالغة أو ألفاظ عامية صعبة، واحتفظ بالمصطلحات العلمية الإنجليزية ثم فسّرها بالمصري.'
+        : dialect === 'english'
+          ? 'Answer in clear, friendly English. Keep scientific terms accurate and explain them simply.'
+          : 'أجب بالعربية الفصحى المبسطة والواضحة، مع إبقاء المصطلحات العلمية الإنجليزية وشرحها.';
+      const system =
+        'أنت مدرس جامعي ومساعد مذاكرة. ' + languageRule + ' ' +
+        'عند الاعتماد على المحاضرة، استشهد برقم الصفحة أو الشريحة الظاهر في النص مثل [صفحة 4]. ' +
+        'لا تدّعِ أن معلومة موجودة في المحاضرة إذا لم تظهر في المقاطع المسترجعة. إذا لم تجد الإجابة فقل ذلك بوضوح وميّز أي معرفة خارجية عن محتوى المحاضرة.' +
+        (context ? '\nمقاطع ذات صلة من محاضرة الطالب:\n' + context : '\nلم يرفع الطالب محاضرة بعد؛ أجب من معرفتك العامة مع توضيح ذلك.');
+      const messages = [{ role: 'system', content: system }].concat(conversation.slice(-10));
+      const answer = await ai(messages);
+      conversation.push({ role: 'assistant', content: answer });
+      if (typeof add === 'function') add('ai', answer);
+      else appendText($('chat'), 'div', answer, 'msg ai');
+      if (typeof say === 'function') say(answer.replace(/[*#_]/g, ''));
+    } catch (error) {
+      const message = 'تعذر الحصول على إجابة: ' + (error.message || String(error));
+      if (typeof add === 'function') add('ai', message);
+      else appendText($('chat'), 'div', message, 'msg ai');
+    }
   };
 
 })();
