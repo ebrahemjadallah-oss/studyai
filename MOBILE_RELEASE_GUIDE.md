@@ -66,6 +66,8 @@ Before submission:
 
 Google Play developer registration currently has a one-time US$25 fee. Fees and account verification requirements should be confirmed in Play Console.
 
+**Important for new personal developer accounts:** accounts created after 13 November 2023 must run a closed test with at least 12 testers continuously opted in for 14 days, then apply for production access in Play Console. This requirement is separate from the technical APK/AAB build.
+
 ### Apple App Store
 
 Before submission:
@@ -77,6 +79,8 @@ Before submission:
 6. Test microphone permissions, speech recognition, OCR and offline/local-library behavior on physical iPhones and iPads.
 
 The Apple Developer Program currently costs US$99 per year (local pricing may vary). Capacitor 8 requires macOS with Xcode 26 or newer. Store approval is controlled by Apple and cannot be guaranteed.
+
+**App Review note:** Apple guideline 4.2 expects meaningful app-specific utility beyond a repackaged website. StudyAI is being prepared with local OCR, a local lecture library, spaced review and native speech features; these must work reliably on real iPhones/iPads and should be clearly described in the review notes.
 
 ## Cloud AI gateway
 
