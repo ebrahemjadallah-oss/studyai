@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>StudyAI — مساحة مذاكرتك الذكية</title>
-<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#101b2f"><meta name="description" content="مساحة تعلم ذكية لتنظيم المحاضرات وفهمها والتدرب على الاختبارات.">
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#101b2f"><meta name="description" content="مساحة تعلم ذكية لتنظيم المحاضرات وفهمها والتدرب على الاختبارات."><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -244,6 +244,7 @@ small{color:var(--muted);font-size:10px}
 <button class="b" onclick="save()">حفظ الإعدادات</button> <button class="b button secondary" onclick="test()">اختبار الاتصال</button><div id="tst"></div>
 <div class="status-line">المزودان Groq وOpenRouter يرسلان الطلبات عبر البوابة الآمنة ولا يُخزّن مفتاحهما في جهازك. أضف مفاتيح المزودين كـ Secrets في Cloudflare Worker. لا تستخدم مفتاح API شخصيًا داخل تطبيق منشور.</div>
 <p><small>Ollama: شغّله بالأمر <code>OLLAMA_ORIGINS=* ollama serve</code> وحمّل نموذجًا يدعم العربية مثل <code>qwen2.5:7b</code>.</small></p>
+<p><a href="privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a> · <a href="https://github.com/ebrahemjadallah-oss/studyai/tree/main/worker" target="_blank" rel="noopener">دليل إعداد بوابة الذكاء الاصطناعي</a></p>
 </div></section>
 </main>
 <script>
@@ -258,10 +259,11 @@ document.addEventListener('click',e=>{const go=e.target.closest('[data-go]');if(
 show('home');
 const P={ollama:['http://localhost:11434/v1','qwen2.5:7b'],groq:['https://api.groq.com/openai/v1','llama-3.3-70b-versatile'],openrouter:['https://openrouter.ai/api/v1','meta-llama/llama-3.3-70b-instruct:free'],custom:['','']};
 function presets(){const p=P[$('prov').value];$('url').value=p[0];$('model').value=p[1]}
-function load(){try{const s=JSON.parse(localStorage.getItem('cfg')||'null');if(s){$('prov').value=s.prov;$('url').value=s.url;$('model').value=s.model;$('key').value=s.prov==='custom'?(s.key||''):'';$('proxyUrl').value=s.proxyUrl||'';return}}catch(e){}presets()}
+function load(){try{const s=JSON.parse(localStorage.getItem('cfg')||'null');if(s){$('prov').value=s.prov;$('url').value=s.url;$('model').value=s.model;$('key').value=s.prov==='custom'?(s.key||''):'';$('proxyUrl').value=s.proxyUrl||'';}else{presets()}}catch(e){presets()}try{const p=JSON.parse(localStorage.getItem('studyai-prefs')||'{}');if(p.dialect)$('dialect').value=p.dialect;if(p.voiceLang)$('voiceLang').value=p.voiceLang}catch(e){}}
 function save(){try{const prov=$('prov').value;const cfg={prov,url:$('url').value,model:$('model').value,proxyUrl:$('proxyUrl').value.trim(),key:prov==='custom'?$('key').value:''};localStorage.setItem('cfg',JSON.stringify(cfg));$('key').value=cfg.key;$('tst').textContent='✅ تم الحفظ؛ مفاتيح Groq وOpenRouter لا تُحفظ في هذا المتصفح.'}catch(e){$('tst').textContent='تعذر الحفظ'}}
 
 load();
+['dialect','voiceLang'].forEach(id=>$(id).addEventListener('change',()=>{try{localStorage.setItem('studyai-prefs',JSON.stringify({dialect:$('dialect').value,voiceLang:$('voiceLang').value}))}catch(e){}}));
 async function ai(messages,json){
  const provider=$('prov').value;const headers={'Content-Type':'application/json'};
  let endpoint=$('url').value.replace(/\/$/,'')+'/chat/completions';
