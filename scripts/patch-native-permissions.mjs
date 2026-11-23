@@ -16,8 +16,8 @@ if (platform === 'android') {
   const variablesPath = 'android/variables.gradle';
   try {
     let variables = await readFile(variablesPath, 'utf8');
-    variables = variables.replace(/targetSdkVersion\\s*=\\s*\\d+/, 'targetSdkVersion = 36');
-    variables = variables.replace(/compileSdkVersion\\s*=\\s*\\d+/, 'compileSdkVersion = 36');
+    variables = variables.replace(/targetSdkVersion\s*=\s*\d+/, 'targetSdkVersion = 36');
+    variables = variables.replace(/compileSdkVersion\s*=\s*\d+/, 'compileSdkVersion = 36');
     await writeFile(variablesPath, variables, 'utf8');
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
