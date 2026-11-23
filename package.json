@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@capgo/capacitor-speech-recognition": "8.6.0",
+    "@capgo/capacitor-speech-synthesis": "8.0.27",
     "@capacitor/android": "8.5.2",
     "@capacitor/core": "8.5.2",
     "@capacitor/ios": "8.5.2"
