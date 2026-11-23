@@ -512,4 +512,233 @@
     });
   };
 
+  function groupNotesByCount(notes, requestedGroups) {
+    const groupCount = Math.max(1, Math.min(requestedGroups, notes.length));
+    const groups = [];
+    const totalLength = notes.reduce(function (sum, note) { return sum + note.length; }, 0);
+    const targetLength = totalLength / groupCount;
+    let current = [];
+    let currentLength = 0;
+    let consumed = 0;
+
+    notes.forEach(function (note, index) {
+      const groupsLeft = groupCount - groups.length;
+      const notesLeft = notes.length - index;
+      if (current.length && groupsLeft > 1 && notesLeft >= groupsLeft &&
+          currentLength >= targetLength && currentLength + note.length > targetLength * 0.72) {
+        groups.push(current.join('\n\n'));
+        current = [];
+        currentLength = 0;
+      }
+      current.push(note);
+      currentLength += note.length;
+      consumed += note.length;
+    });
+    if (current.length) groups.push(current.join('\n\n'));
+    return groups;
+  }
+
+  function allocateCountsByLength(groups, total) {
+    const count = groups.length;
+    const result = groups.map(function (group, index) {
+      return { index: index, amount: 1, remainder: 0 };
+    });
+    let remaining = Math.max(0, total - count);
+    if (!remaining) return result;
+    const totalLength = groups.reduce(function (sum, group) { return sum + group.length; }, 0);
+    let assigned = 0;
+    result.forEach(function (item) {
+      const exact = remaining * groups[item.index].length / Math.max(1, totalLength);
+      const whole = Math.floor(exact);
+      item.amount += whole;
+      item.remainder = exact - whole;
+      assigned += whole;
+    });
+    const leftovers = remaining - assigned;
+    result.slice().sort(function (a, b) {
+      return b.remainder - a.remainder || a.index - b.index;
+    }).slice(0, leftovers).forEach(function (item) {
+      result[item.index].amount += 1;
+    });
+    return result;
+  }
+
+  renderQuiz = function (output, questions) {
+    output.textContent = '';
+    const score = appendText(output, 'div', 'النتيجة: 0 من 0 أسئلة موضوعية');
+    score.style.fontWeight = '800';
+    score.style.margin = '12px 0';
+    const list = document.createElement('div');
+    output.appendChild(list);
+    let correct = 0;
+    let attempted = 0;
+    let reviewed = 0;
+
+    function updateScore() {
+      score.textContent = 'النتيجة: ' + correct + ' من ' + attempted +
+        ' أسئلة موضوعية · تمت مراجعة ' + reviewed + ' أسئلة مقالية/إكمال';
+    }
+
+    questions.forEach(function (question, index) {
+      const card = document.createElement('div');
+      card.className = 'q';
+      appendText(card, 'b', (index + 1) + ') ' + (question.q || 'سؤال بدون نص'));
+      if (question.source) appendText(card, 'small', 'المصدر: ' + question.source);
+
+      function finish(result, answerText) {
+        if (card.dataset.done) return;
+        card.dataset.done = '1';
+        if (result === true || result === false) {
+          attempted++;
+          if (result === true) correct++;
+        } else {
+          reviewed++;
+        }
+        updateScore();
+        if (answerText) appendText(card, 'div', answerText, 'out');
+        if (question.explain) appendText(card, 'small', 'التفسير: ' + question.explain);
+      }
+
+      if (question.type === 'mcq' || question.type === 'tf') {
+        const options = question.type === 'tf' ? ['صح', 'خطأ'] :
+          (Array.isArray(question.options) ? question.options : []);
+        const isTrue = question.answer === true || String(question.answer).toLowerCase() === 'true';
+        const answerIndex = question.type === 'tf' ? (isTrue ? 0 : 1) : Number(question.answer);
+        options.forEach(function (option, optionIndex) {
+          const choice = document.createElement('button');
+          choice.className = 'opt';
+          choice.textContent = String(option);
+          choice.onclick = function () {
+            if (card.dataset.done) return;
+            const isCorrect = optionIndex === answerIndex;
+            const buttons = card.querySelectorAll('.opt');
+            choice.classList.add(isCorrect ? 'ok' : 'no');
+            if (buttons[answerIndex]) buttons[answerIndex].classList.add('ok');
+            buttons.forEach(function (item) { item.disabled = true; });
+            finish(isCorrect, isCorrect ? 'إجابة صحيحة ✓' : 'الإجابة الصحيحة: ' + (options[answerIndex] || 'غير محددة'));
+          };
+          card.appendChild(choice);
+        });
+      } else {
+        const answerButton = appendText(card, 'button', 'إظهار الإجابة النموذجية', 'b');
+        answerButton.onclick = function () {
+          answerButton.disabled = true;
+          finish(null, 'الإجابة النموذجية: ' + (question.answer || 'لا توجد إجابة مرفقة'));
+        };
+      }
+      list.appendChild(card);
+    });
+  };
+
+  window.makeQuiz = function (button) {
+    const text = sourceText();
+    if (!text) { alert('ارفع ملفًا أو الصق نص المحاضرة أولًا.'); return; }
+    const output = $('quizOut');
+    const requested = Math.max(3, Math.min(40, Number($('qn').value) || 10));
+    runTask(button, output, async function () {
+      const notes = await extractNotesForAll(text, output, 'إعداد اختبار شامل يغطي المحاضرة كلها');
+      const groups = groupNotesByCount(notes, requested);
+      const plan = allocateCountsByLength(groups, requested);
+      const allQuestions = [];
+
+      for (let i = 0; i < plan.length; i++) {
+        const item = plan[i];
+        output.textContent = 'إنشاء الأسئلة من تغطية ' + (i + 1) + ' من ' + plan.length +
+          ' — تم تحليل ' + notes.length + ' أجزاء من المصدر';
+        const prompt =
+          'أنشئ ' + item.amount + ' سؤالًا جامعيًا من الملاحظات المرفقة. هذه الملاحظات ناتجة عن أجزاء متتابعة من المحاضرة، وقد جرى تجميعها لتغطية المحتوى كاملًا. ' +
+          'لا تتجاهل أي قسم من الملاحظات، ونوّع بين mcq و tf و fill و essay قدر الإمكان. ' +
+          'يجب أن تكون الإجابة مستندة إلى النص فقط، وأرفق رقم الصفحة أو الشريحة عندما يذكر في المصدر. ' +
+          'أخرج JSON صالحًا فقط بهذا الشكل: {"questions":[{"type":"mcq","q":"السؤال","options":["أ","ب","ج","د"],"answer":0,"explain":"التفسير","source":"الصفحة 2"},{"type":"tf","q":"العبارة","answer":true,"explain":"التفسير","source":"الشريحة 3"},{"type":"fill","q":"أكمل: ...","answer":"الإجابة","explain":"التفسير","source":"الصفحة 4"},{"type":"essay","q":"السؤال","answer":"إجابة نموذجية","source":"الصفحة 5"}]}. ' +
+          'في mcq يجب أن يكون answer رقم الاختيار من صفر إلى ثلاثة. وفي tf استخدم true أو false.\n\n' +
+          groups[item.index];
+        const raw = await ai([
+          { role: 'system', content: 'أنت واضع امتحانات جامعية دقيق. لا تضف معلومة من خارج الملاحظات، وأخرج JSON فقط.' },
+          { role: 'user', content: prompt }
+        ]);
+        const data = cleanJson(raw);
+        const questions = Array.isArray(data.questions) ? data.questions : [];
+        questions.slice(0, item.amount).forEach(function (question) {
+          question.source = question.source || 'من الملاحظات المجمعة للمحاضرة';
+          allQuestions.push(question);
+        });
+      }
+
+      if (!allQuestions.length) throw new Error('لم يتم إنشاء أسئلة صالحة. أعد المحاولة.');
+      renderQuiz(output, allQuestions);
+      if (allQuestions.length < requested) {
+        appendText(output, 'small', 'ملاحظة: أنشأ النموذج ' + allQuestions.length + ' سؤالًا من أصل ' + requested + ' مطلوب؛ راجع عدد الأسئلة أو أعد المحاولة.');
+      }
+    });
+  };
+
+  window.makeVideo = function (button) {
+    const text = sourceText();
+    if (!text) { alert('ارفع ملفًا أو الصق نص المحاضرة أولًا.'); return; }
+    const output = $('vidOut');
+    const requested = Math.max(3, Math.min(15, Number($('vn').value) || 6));
+    runTask(button, output, async function () {
+      const notes = await extractNotesForAll(text, output, 'إعداد عرض شرح تعليمي يغطي المحاضرة كلها');
+      const groups = groupNotesByCount(notes, requested);
+      const plan = allocateCountsByLength(groups, requested);
+      const slides = [];
+
+      for (let i = 0; i < plan.length; i++) {
+        const item = plan[i];
+        output.textContent = 'إعداد شرائح الشرح ' + (i + 1) + ' من ' + plan.length +
+          ' — تم تحليل ' + notes.length + ' أجزاء من المصدر';
+        const prompt =
+          'أنشئ ' + item.amount + ' شرائح شرح تعليمية من الملاحظات المرفقة. غطّ كل الأفكار الموجودة في الملاحظات وحافظ على ترتيبها. ' +
+          'كل شريحة يجب أن تحتوي title و bullets (من 2 إلى 5 نقاط) و narration (شرح صوتي واضح). لا تضف معلومات خارج المصدر. ' +
+          'أرفق رقم الصفحة أو الشريحة عند توفره. أخرج JSON فقط: {"slides":[{"title":"عنوان","bullets":["نقطة 1","نقطة 2"],"narration":"شرح المدرس","source":"الصفحة 2"}]}.\n\n' +
+          groups[item.index];
+        const raw = await ai([
+          { role: 'system', content: 'أنت معدّ دروس تعليمية. اعتمد على الملاحظات فقط وأخرج JSON صالحًا دون Markdown.' },
+          { role: 'user', content: prompt }
+        ]);
+        const data = cleanJson(raw);
+        const partSlides = Array.isArray(data.slides) ? data.slides : [];
+        partSlides.slice(0, item.amount).forEach(function (slide) {
+          slide.source = slide.source || 'من الملاحظات المجمعة للمحاضرة';
+          slides.push(slide);
+        });
+      }
+
+      if (!slides.length) throw new Error('لم يتم إنشاء شرائح صالحة.');
+      renderSlides(output, slides);
+      if (slides.length < requested) {
+        appendText(output, 'small', 'ملاحظة: أنشأ النموذج ' + slides.length + ' شريحة من أصل ' + requested + ' مطلوبة.');
+      }
+    });
+  };
+
+  const uploadZone = document.querySelector('.upload-zone');
+  const fileInput = $('fi');
+  if (uploadZone && fileInput) {
+    ['dragenter', 'dragover'].forEach(function (eventName) {
+      uploadZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        uploadZone.classList.add('is-dragging');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (eventName) {
+      uploadZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        uploadZone.classList.remove('is-dragging');
+      });
+    });
+    uploadZone.addEventListener('drop', function (event) {
+      const files = event.dataTransfer && event.dataTransfer.files;
+      if (!files || !files.length) return;
+      if (typeof DataTransfer !== 'undefined') {
+        const transfer = new DataTransfer();
+        Array.from(files).forEach(function (file) { transfer.items.add(file); });
+        fileInput.files = transfer.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        $('info').textContent = 'تعذر استخدام السحب والإفلات في هذا المتصفح؛ استخدم زر اختيار الملفات.';
+      }
+    });
+  }
+
 })();
