@@ -7,6 +7,28 @@
 
   function sourceText() { return $('txt').value.trim(); }
 
+  function studyLanguageInstruction() {
+    const language = $('dialect') ? $('dialect').value : 'egyptian';
+    if (language === 'english') {
+      return 'Write the generated learning content in clear, simple English only. Keep scientific vocabulary accurate and explain difficult terms.';
+    }
+    if (language === 'msa') {
+      return 'اكتب كل الشرح العربي بالعربية الفصحى المبسطة والواضحة. احتفظ بالمصطلحات العلمية الإنجليزية واشرحها دون تعقيد.';
+    }
+    return 'استخدم العامية المصرية الطبيعية والواضحة في الشرح والأسئلة والإجابات والتعليق الصوتي، كمدرس مصري بيشرح لطالب. تجنب المبالغة في العامية أو الألفاظ الصعبة، واحتفظ بالمصطلحات العلمية الإنجليزية واشرحها بالمصري.';
+  }
+
+  function bilingualNotesInstruction() {
+    const language = $('dialect') ? $('dialect').value : 'egyptian';
+    if (language === 'english') {
+      return 'اكتب الملخص بالإنجليزية فقط، مع الحفاظ على المصطلحات العلمية وشرحها بوضوح.';
+    }
+    if (language === 'msa') {
+      return 'اكتب كل نقطة بالإنجليزية أولًا، ثم ترجمتها العربية الفصحى المبسطة مباشرة تحتها.';
+    }
+    return 'اكتب كل نقطة بالإنجليزية أولًا، ثم شرحها أو ترجمتها بالعامية المصرية الطبيعية مباشرة تحتها، مع إبقاء المصطلحات العلمية بالإنجليزية.';
+  }
+
   function sourceChunks(text, maxSize) {
     const max = maxSize || CHUNK_SIZE;
     const lines = text.split(/\r?\n/);
@@ -125,14 +147,14 @@
           'تعليمات إلزامية:\n' +
           '1) حافظ على ترتيب الأفكار كما وردت في المصدر.\n' +
           '2) لا تحذف التعريفات أو الشروط أو الأرقام أو الأمثلة أو الاستثناءات أو المقارنات.\n' +
-          '3) عندما تكون المادة بالإنجليزية، اكتب كل نقطة بالإنجليزية أولًا ثم ترجمتها العربية مباشرة تحتها.\n' +
+          '3) ' + bilingualNotesInstruction() + '\n' +
           '4) أبقِ المصطلحات العلمية الإنجليزية واضحة.\n' +
           '5) ميّز أي شرح إضافي غير موجود في المصدر بعبارة "توضيح إضافي"، ولا تخلطه بمحتوى المحاضرة.\n' +
           '6) اكتب رقم الصفحة بجوار النقطة متى كان متاحًا، ولا تخمّن أرقام الصفحات.\n' +
           '7) إذا كان جزء من النص غير واضح، أشر إليه ولا تستنتج محتواه.\n\n' +
           'هذا الجزء ' + (i + 1) + ' من ' + chunks.length + ' — ' + label + '\n' + chunks[i];
         const result = await ai([
-          { role: 'system', content: 'أنت مدرس جامعي ومنسق مذكرات دقيق. لا تختصر اختصارًا يضيّع التفاصيل.' },
+          { role: 'system', content: 'أنت مدرس جامعي ومنسق مذكرات دقيق. لا تختصر اختصارًا يضيّع التفاصيل. ' + studyLanguageInstruction() },
           { role: 'user', content: prompt }
         ]);
         results.push('========== الجزء ' + (i + 1) + ' — ' + label + ' ==========\n' + result);
@@ -156,10 +178,10 @@
         'نوّع بين mcq و tf و fill و essay. اجعل الأسئلة دقيقة وغير مكررة، ولا تضع معلومة غير موجودة في الملاحظات. أضف مصدر كل سؤال (رقم الصفحة أو الشريحة إن توفر).\n' +
         'أعد JSON صالحًا فقط بهذا الشكل:\n' +
         '{"questions":[{"type":"mcq","q":"السؤال","options":["أ","ب","ج","د"],"answer":0,"explain":"سبب الإجابة","source":"الصفحة 2"},{"type":"tf","q":"العبارة","answer":true,"explain":"التفسير","source":"الصفحة 3"},{"type":"fill","q":"أكمل: ...","answer":"الإجابة","explain":"التفسير","source":"الصفحة 4"},{"type":"essay","q":"السؤال","answer":"إجابة نموذجية","source":"الصفحة 5"}]}\n' +
-        'في mcq يجب أن يكون answer رقم الاختيار من صفر إلى ثلاثة. وفي tf يجب أن يكون answer قيمة true أو false.\n\n' +
+        'في mcq يجب أن يكون answer رقم الاختيار من صفر إلى ثلاثة. وفي tf يجب أن يكون answer قيمة true أو false. ' + studyLanguageInstruction() + '\n\n' +
         notes.join('\n\n');
       const raw = await ai([
-        { role: 'system', content: 'أنت واضع امتحانات جامعية. أخرج JSON فقط دون Markdown أو مقدمة.' },
+        { role: 'system', content: 'أنت واضع امتحانات جامعية. ' + studyLanguageInstruction() + ' أخرج JSON فقط دون Markdown أو مقدمة.' },
         { role: 'user', content: prompt }
       ]);
       const data = cleanJson(raw);
@@ -245,10 +267,10 @@
       const prompt =
         'حوّل الملاحظات التالية إلى عرض شرح تعليمي من ' + requested + ' شرائح بالضبط.\n' +
         'كل شريحة تحتوي title و bullets (من 2 إلى 5 نقاط) و narration (شرح صوتي واضح وموسع نسبيًا). حافظ على ترتيب المحاضرة وأضف مصدر الصفحة في نهاية كل نقطة متى كان متاحًا. لا تضف معلومات خارج الملاحظات.\n' +
-        'أخرج JSON فقط بهذا الشكل: {"slides":[{"title":"عنوان","bullets":["نقطة"],"narration":"الشرح","source":"الصفحات 1–2"}]}\n\n' +
+        'أخرج JSON فقط بهذا الشكل: {"slides":[{"title":"عنوان","bullets":["نقطة"],"narration":"الشرح","source":"الصفحات 1–2"}]}. ' + studyLanguageInstruction() + '\n\n' +
         notes.join('\n\n');
       const raw = await ai([
-        { role: 'system', content: 'أنت معدّ دروس تعليمية. أخرج JSON صالحًا فقط.' },
+        { role: 'system', content: 'أنت معدّ دروس تعليمية. ' + studyLanguageInstruction() + ' أخرج JSON صالحًا فقط.' },
         { role: 'user', content: prompt }
       ]);
       const data = cleanJson(raw);
@@ -1066,9 +1088,9 @@
       let saved = 0;
       for (let i = 0; i < groups.length; i++) {
         output.textContent = 'إنشاء بطاقات الجزء ' + (i + 1) + ' من ' + groups.length;
-        const prompt = 'أنشئ بطاقات حفظ من نوع سؤال وإجابة من النص التالي فقط. أنشئ بطاقتين إلى أربع بطاقات لهذا الجزء. ركّز على التعريفات والمصطلحات والمقارنات والأرقام والخطوات. تجنب الأسئلة العامة جدًا. أرفق الصفحة عند توفرها. أخرج JSON فقط بهذا الشكل: {"cards":[{"question":"السؤال","answer":"إجابة دقيقة","source":"الصفحة 3"}]}.\n\n' + groups[i];
+        const prompt = 'أنشئ بطاقات حفظ من نوع سؤال وإجابة من النص التالي فقط. أنشئ بطاقتين إلى أربع بطاقات لهذا الجزء. ركّز على التعريفات والمصطلحات والمقارنات والأرقام والخطوات. تجنب الأسئلة العامة جدًا. أرفق الصفحة عند توفرها. ' + studyLanguageInstruction() + ' أخرج JSON فقط بهذا الشكل: {"cards":[{"question":"السؤال","answer":"إجابة دقيقة","source":"الصفحة 3"}]}.\n\n' + groups[i];
         const raw = await ai([
-          { role: 'system', content: 'أنت خبير في تصميم بطاقات المراجعة. لا تضف معلومة من خارج المصدر، وأخرج JSON صالحًا فقط.' },
+          { role: 'system', content: 'أنت خبير في تصميم بطاقات المراجعة. ' + studyLanguageInstruction() + ' لا تضف معلومة من خارج المصدر، وأخرج JSON صالحًا فقط.' },
           { role: 'user', content: prompt }
         ]);
         const data = cleanJson(raw);
