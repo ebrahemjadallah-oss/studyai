@@ -5,59 +5,233 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.7}
-nav{display:flex;gap:4px;overflow-x:auto;background:#1e293b;padding:8px;position:sticky;top:0;z-index:5}
-nav button{flex:none;background:none;border:0;color:#94a3b8;padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
-nav button.on{background:#38bdf8;color:#0f172a;font-weight:700}
-main{max-width:860px;margin:auto;padding:16px}section{display:none}section.on{display:block}
-.card{background:#1e293b;border-radius:12px;padding:14px;margin:10px 0}
-button.b,select,input,textarea{font:inherit;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:8px 12px}
-button.b{background:#38bdf8;color:#0f172a;border:0;font-weight:700;cursor:pointer;margin:4px 0}
-button.b:disabled{opacity:.5}input,textarea,select{width:100%;margin:4px 0}
-.out{white-space:pre-wrap}.q{border-right:4px solid #38bdf8;padding-right:10px;margin:14px 0}
-.opt{display:block;width:100%;text-align:right;margin:4px 0;padding:8px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:inherit;font:inherit;cursor:pointer}
-.ok{background:#14532d!important}.no{background:#7f1d1d!important}
-.slide{min-height:220px;background:#0b1220;border:2px solid #38bdf8;border-radius:14px;padding:24px;font-size:1.2em}
-.slide h2{color:#38bdf8;margin-top:0}.msg{padding:8px 12px;border-radius:10px;margin:6px 0;max-width:90%}
-.me{background:#0369a1;margin-right:auto}.ai{background:#334155}small{color:#94a3b8}
+:root{--ink:#132238;--ink-soft:#52647c;--muted:#7c8ba0;--canvas:#f3f6fb;--paper:#fff;--line:#e4eaf2;--teal:#19b99c;--teal-dark:#0d927d;--mint:#dff8f1;--gold:#f3bd61;--nav:#101b2f;--nav-muted:#9babc0;--shadow:0 18px 50px rgba(24,43,71,.08)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:var(--canvas);color:var(--ink);line-height:1.7;display:grid;grid-template-columns:252px minmax(0,1fr);grid-template-areas:"nav main";direction:rtl}
+#nav{grid-area:nav;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--nav);color:#fff;padding:24px 16px;display:flex;flex-direction:column;gap:10px;z-index:10;border-left:1px solid rgba(255,255,255,.05)}
+.brand{display:flex;align-items:center;gap:12px;padding:6px 10px 28px}
+.brand-mark{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#50e0c0,#149a89);display:grid;place-items:center;color:#092c2d;font-weight:900;font-size:19px;box-shadow:0 8px 24px rgba(25,185,156,.2)}
+.brand-name{font-size:19px;line-height:1.1;font-weight:850;letter-spacing:.2px}
+.brand-name small{display:block;font-size:10px;color:#8ea4bb;font-weight:600;letter-spacing:1.7px;margin-top:6px}
+.nav-caption{font-size:10px;letter-spacing:1.7px;color:#75869c;padding:8px 13px 4px;font-weight:800}
+#nav .nav-item{width:100%;border:0;background:transparent;color:var(--nav-muted);border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:12px;text-align:right;font:inherit;font-size:13px;cursor:pointer;transition:background .2s,color .2s,transform .2s}
+#nav .nav-item:hover{background:rgba(255,255,255,.07);color:#fff;transform:translateX(-2px)}
+#nav .nav-item.on{background:linear-gradient(110deg,rgba(25,185,156,.22),rgba(25,185,156,.08));color:#8ff0da;box-shadow:inset -3px 0 0 var(--teal)}
+.nav-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:rgba(255,255,255,.06);font-size:16px}
+.nav-item.on .nav-icon{background:rgba(25,185,156,.18);color:#a4ffeb}
+.nav-label{flex:1}
+.nav-arrow{font-size:17px;opacity:.45}
+.nav-spacer{flex:1;min-height:20px}
+.nav-foot{margin-top:18px;padding:14px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.035)}
+.nav-foot strong{display:block;font-size:12px;color:#e1ebf5}
+.nav-foot span{display:block;color:#8395aa;font-size:10px;margin-top:4px}
+main{grid-area:main;max-width:1440px;width:100%;min-width:0;margin:0 auto;padding:26px clamp(18px,3.2vw,48px) 64px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:26px}
+.breadcrumb{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:9px}
+.breadcrumb b{color:var(--ink);font-weight:750}
+.top-actions{display:flex;align-items:center;gap:10px}
+.version-pill{font-size:10px;font-weight:800;color:var(--teal-dark);background:var(--mint);border:1px solid #c6f0e6;border-radius:999px;padding:6px 11px}
+.top-link{border:1px solid var(--line);background:#fff;color:var(--ink-soft);padding:8px 13px;border-radius:10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.page-heading{margin:0 0 22px}
+.page-heading h1{font-size:clamp(22px,2.5vw,30px);letter-spacing:-.6px;margin:0 0 5px;font-weight:850}
+.page-heading p{margin:0;color:var(--muted);font-size:13px}
+section{display:none;animation:rise .28s ease both}
+section.on{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px;margin:12px 0;box-shadow:0 4px 18px rgba(26,45,72,.025)}
+.card h3{font-size:17px;font-weight:800;margin:0 0 12px;color:var(--ink)}
+.card p{color:var(--ink-soft);font-size:13px}
+.hero{position:relative;isolation:isolate;overflow:hidden;min-height:270px;border-radius:24px;padding:clamp(24px,4vw,42px);background:radial-gradient(circle at 12% 18%,rgba(54,220,189,.23),transparent 26%),linear-gradient(115deg,#142941 0%,#102238 54%,#173e4b 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 22px 55px rgba(17,39,62,.16)}
+.hero:before{content:"";position:absolute;z-index:-1;width:360px;height:360px;border:1px solid rgba(119,241,218,.13);border-radius:50%;left:3%;top:-140px;box-shadow:0 0 0 35px rgba(119,241,218,.025),0 0 0 70px rgba(119,241,218,.02)}
+.hero-copy{max-width:640px;position:relative;z-index:1}
+.hero-kicker{color:#80e7d2;font-size:10px;font-weight:850;letter-spacing:2px}
+.hero h2{font-size:clamp(25px,3.5vw,39px);line-height:1.3;letter-spacing:-.7px;margin:12px 0 10px;color:#fff;max-width:610px}
+.hero p{font-size:13px;color:#c0d1df;max-width:590px;margin:0 0 22px}
+.hero-actions{display:flex;gap:9px;flex-wrap:wrap}
+.primary-btn,.ghost-btn,.button,.b{font:inherit;cursor:pointer;border-radius:11px;padding:10px 16px;font-size:12px;font-weight:800;transition:transform .18s,background .18s,box-shadow .18s}
+.primary-btn{border:0;background:var(--teal);color:#082d2a;box-shadow:0 8px 22px rgba(25,185,156,.2)}
+.primary-btn:hover,.button:hover,.b:hover{transform:translateY(-1px);background:#39d4b5}
+.ghost-btn{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#fff}
+.hero-art{flex:0 0 190px;min-height:180px;display:grid;place-items:center;position:relative}
+.hero-orbit{width:156px;height:156px;border-radius:50%;border:1px solid rgba(117,235,211,.35);display:grid;place-items:center;position:relative;box-shadow:0 0 0 14px rgba(117,235,211,.045),0 0 60px rgba(31,203,174,.12)}
+.hero-orbit:before,.hero-orbit:after{content:"";position:absolute;border-radius:50%;border:1px dashed rgba(117,235,211,.35);inset:17px;transform:rotate(35deg)}
+.hero-orbit:after{inset:-14px;transform:rotate(-35deg);border-style:solid;opacity:.35}
+.hero-core{width:82px;height:82px;border-radius:27px;background:linear-gradient(145deg,#7ef1d6,#18a992);display:grid;place-items:center;color:#103a3b;font-size:24px;font-weight:950;box-shadow:0 12px 38px rgba(24,185,156,.25);transform:rotate(-7deg)}
+.hero-dot{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--gold);box-shadow:0 0 18px rgba(243,189,97,.6)}
+.hero-dot.one{top:17px;right:24px}.hero-dot.two{bottom:14px;left:23px;background:#93a9ff}
+.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:18px 0}
+.quick-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:17px;display:flex;align-items:flex-start;gap:13px;min-width:0;cursor:pointer;text-align:right;transition:transform .2s,box-shadow .2s,border .2s}
+.quick-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:#b6e9df}
+.quick-icon{width:40px;height:40px;border-radius:13px;background:#e2f8f2;color:#0c917b;display:grid;place-items:center;font-size:19px;flex:none}
+.quick-card strong{display:block;font-size:13px;color:var(--ink);margin-bottom:3px}
+.quick-card span{display:block;font-size:11px;color:var(--muted);line-height:1.6}
+.section-label{display:flex;align-items:center;justify-content:space-between;margin:26px 0 12px}
+.section-label h3{margin:0;font-size:16px}
+.section-label span{font-size:11px;color:var(--muted)}
+.roadmap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.step-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px;position:relative}
+.step-no{font-size:10px;font-weight:900;color:var(--teal-dark);background:var(--mint);padding:5px 9px;border-radius:8px;display:inline-block}
+.step-card h4{font-size:13px;margin:11px 0 4px}
+.step-card p{margin:0;font-size:11px;color:var(--muted)}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+.panel-head h3{margin:0 0 4px}
+.panel-head p{margin:0;color:var(--muted);font-size:12px}
+.panel-mark{width:40px;height:40px;border-radius:13px;background:#e5f8f3;color:var(--teal-dark);display:grid;place-items:center;font-size:19px;flex:none}
+.upload-zone{border:1.5px dashed #bedbd7;border-radius:16px;background:linear-gradient(145deg,#f8fffd,#f5f9fd);padding:23px;text-align:center}
+.upload-glyph{width:45px;height:45px;margin:0 auto 8px;display:grid;place-items:center;border-radius:14px;background:#ddf8f0;color:#0e967e;font-size:22px}
+.upload-zone strong{display:block;font-size:14px}
+.upload-zone p{font-size:11px;color:var(--muted);margin:4px 0 13px}
+input,textarea,select{width:100%;margin:5px 0;padding:11px 13px;border:1px solid #dfe6ef;border-radius:10px;background:#fbfcfe;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border .2s,box-shadow .2s}
+input:focus,textarea:focus,select:focus{border-color:#55cdb6;box-shadow:0 0 0 3px rgba(25,185,156,.1)}
+input[type=file]{font-size:11px;background:#fff}
+textarea{resize:vertical;min-height:150px;line-height:1.8}
+label{font-size:12px;font-weight:750;color:var(--ink-soft);display:block;margin:12px 0 3px}
+.status-line{font-size:11px;color:var(--teal-dark);background:#effbf7;border-radius:10px;padding:9px 12px;margin-top:12px;min-height:35px}
+.button,.b{border:0;background:var(--teal);color:#082d2a;margin:6px 3px 6px 0}
+.button.secondary{background:#eef4f8;color:#334a62}
+.out{white-space:pre-wrap;line-height:1.9;color:var(--ink);font-size:13px}
+.q{border-right:3px solid var(--teal);background:#f8fbfd;border-radius:10px;padding:14px;margin:14px 0;color:var(--ink)}
+.opt{display:block;width:100%;text-align:right;margin:7px 0;padding:10px 12px;border-radius:9px;border:1px solid #e0e7f0;background:#fff;color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.ok{background:#dff8ec!important;border-color:#9addc1!important}.no{background:#ffe7e7!important;border-color:#f1b5b5!important}
+.slide{min-height:220px;background:#152b40;border:1px solid #27475d;border-radius:16px;padding:24px;font-size:1.05em;color:#eef8fc}
+.slide h2{color:#75e5cd;margin-top:0;font-size:22px}
+.msg{padding:10px 14px;border-radius:13px;margin:8px 0;max-width:90%;font-size:13px;white-space:pre-wrap}
+.me{background:#dff8f1;margin-right:auto;color:#17483f}.ai{background:#edf2f8;color:#20344e}
+small{color:var(--muted);font-size:10px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+#tst{font-size:12px;margin-top:8px;color:var(--teal-dark)}
+#chat{display:flex;flex-direction:column;margin:14px 0}
+@media(max-width:980px){
+ body{grid-template-columns:210px minmax(0,1fr)}
+ #nav{padding:20px 12px}
+ main{padding:20px 18px 50px}
+ .hero-art{flex-basis:145px}
+ .hero-orbit{width:125px;height:125px}
+ .hero-core{width:68px;height:68px}
+}
+@media(max-width:720px){
+ body{display:block;padding-bottom:76px}
+ #nav{position:fixed;top:auto;bottom:0;right:0;left:0;width:100%;height:70px;padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:flex;flex-direction:row;justify-content:space-around;overflow-x:auto;overflow-y:hidden;border-left:0;border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -8px 28px rgba(12,25,42,.18)}
+ .brand,.nav-caption,.nav-spacer,.nav-foot{display:none}
+ #nav .nav-item{width:auto;min-width:54px;padding:6px 8px;display:flex;flex-direction:column;justify-content:center;gap:1px;border-radius:10px;font-size:9px;flex:1}
+ #nav .nav-item.on{box-shadow:inset 0 2px 0 var(--teal)}
+ .nav-icon{width:26px;height:25px;font-size:14px}
+ .nav-arrow{display:none}
+ main{padding:17px 13px 35px}
+ .topbar{margin-bottom:18px}
+ .breadcrumb{font-size:10px}
+ .version-pill{font-size:9px;padding:5px 8px}
+ .top-link{font-size:10px;padding:7px 9px}
+ .hero{min-height:0;padding:23px 19px;border-radius:19px}
+ .hero-art{display:none}
+ .hero h2{font-size:26px}
+ .hero p{font-size:12px}
+ .quick-grid{grid-template-columns:1fr 1fr;gap:9px}
+ .quick-card{padding:13px;gap:9px}
+ .quick-icon{width:34px;height:34px;border-radius:10px;font-size:16px}
+ .quick-card strong{font-size:11px}
+ .quick-card span{font-size:10px}
+ .roadmap{grid-template-columns:1fr}
+ .card{padding:16px;border-radius:15px}
+ .panel-head h3{font-size:15px}
+ .settings-grid{grid-template-columns:1fr}
+}
+@media(max-width:380px){
+ .quick-grid{grid-template-columns:1fr}
+ .hero h2{font-size:23px}
+}
 </style></head><body>
 <nav id="nav"></nav><main>
-<section id="files"><div class="card"><h3>📁 الملفات</h3>
-<input type="file" id="fi" multiple accept=".pdf,.docx,.txt,.md"><small>PDF و Word و PowerPoint ونصوص — تقدر ترفع أكتر من ملف</small>
-<textarea id="txt" rows="10" placeholder="أو الصق نص المحاضرة هنا..."></textarea>
-<div id="info"><small></small></div></div></section>
+<header class="topbar">
+  <div class="breadcrumb"><span>مساحة التعلم</span><span>／</span><b>مركز الدراسة الذكي</b></div>
+  <div class="top-actions"><span class="version-pill">STUDYAI · V2.1 PREVIEW</span><button class="top-link" data-go="set">إعدادات الذكاء الاصطناعي</button></div>
+</header>
+<section id="home">
+<div class="page-heading"><h1>مساحة مذاكرتك</h1><p>من أول صفحة في المحاضرة إلى آخر سؤال في المراجعة — كل شيء في مكان واحد.</p></div>
+<div class="hero">
+ <div class="hero-copy"><div class="hero-kicker">YOUR PERSONAL LEARNING STUDIO</div><h2>افهم المعلومة. اربط الأفكار. وادخل امتحانك بثقة.</h2><p>ارفع محاضرتك، وحوّلها إلى مذكرات ثنائية اللغة وأسئلة وشرح تفاعلي، مع ربط الإجابات بمصدرها متى توفر رقم الصفحة.</p>
+ <div class="hero-actions"><button class="primary-btn" data-go="files">ابدأ بمحاضرة جديدة ↗</button><button class="ghost-btn" data-go="org">افتح استوديو الفهم</button></div></div>
+ <div class="hero-art"><div class="hero-orbit"><div class="hero-core">AI</div><i class="hero-dot one"></i><i class="hero-dot two"></i></div></div>
+</div>
+<div class="section-label"><h3>اختَر خطوتك التالية</h3><span>أدواتك الأساسية في مكان واحد</span></div>
+<div class="quick-grid">
+ <button class="quick-card" data-go="files"><span class="quick-icon">↥</span><span><strong>مكتبة المحاضرات</strong><span>ارفع PDF أو Word أو PowerPoint.</span></span></button>
+ <button class="quick-card" data-go="org"><span class="quick-icon">✧</span><span><strong>استوديو الفهم</strong><span>ترجمة وشرح وتنظيم مع الحفاظ على التفاصيل.</span></span></button>
+ <button class="quick-card" data-go="quiz"><span class="quick-icon">▤</span><span><strong>مختبر الاختبارات</strong><span>تدرّب مع توضيح الإجابة ومصدرها.</span></span></button>
+ <button class="quick-card" data-go="vid"><span class="quick-icon">▷</span><span><strong>مسرح الشرح</strong><span>شرائح تعليمية بصوت مسموع.</span></span></button>
+ <button class="quick-card" data-go="voice"><span class="quick-icon">◉</span><span><strong>اسأل StudyAI</strong><span>ناقش نقطة صعبة من المحاضرة.</span></span></button>
+ <button class="quick-card" data-go="set"><span class="quick-icon">⚙</span><span><strong>إعداد المحرك</strong><span>اضبط النموذج وطريقة الاتصال.</span></span></button>
+</div>
+<div class="section-label"><h3>مسار المذاكرة الذكي</h3><span>من المصدر إلى الاستعداد</span></div>
+<div class="roadmap">
+ <div class="step-card"><span class="step-no">01 / SOURCE</span><h4>ابدأ بالمصدر</h4><p>ارفع ملف المحاضرة وحدد النص الذي تريد العمل عليه.</p></div>
+ <div class="step-card"><span class="step-no">02 / UNDERSTAND</span><h4>ابنِ الفهم</h4><p>نظّم الأفكار، وافهم المصطلحات، وراجع ما يصعب عليك.</p></div>
+ <div class="step-card"><span class="step-no">03 / PRACTICE</span><h4>اختبر نفسك</h4><p>حل الأسئلة واكتشف النقاط التي تحتاج إلى مراجعة.</p></div>
+</div>
+</section>
+<section id="files">
+<div class="page-heading"><h1>مكتبة المحاضرات</h1><p>ارفع مصدرك الدراسي أو الصق النص، ثم اختر الأداة المناسبة لفهمه ومراجعته.</p></div>
+<div class="card">
+  <div class="panel-head"><div><h3>أضف محاضرة جديدة</h3><p>تُقرأ الملفات محليًا داخل المتصفح قبل إرسال النص إلى مزود الذكاء الاصطناعي الذي تختاره.</p></div><div class="panel-mark">↥</div></div>
+  <div class="upload-zone">
+    <div class="upload-glyph">↥</div><strong>ابدأ بإضافة ملفاتك الدراسية</strong>
+    <p>PDF · Word · PowerPoint · TXT · Markdown</p>
+    <input type="file" id="fi" multiple accept=".pdf,.docx,.txt,.md,.pptx">
+  </div>
+  <label for="txt">نص المحاضرة أو النص المستخرج</label>
+  <textarea id="txt" rows="10" placeholder="يمكنك أيضًا لصق نص المحاضرة هنا..."></textarea>
+  <div id="info" class="status-line">جاهز لاستقبال محاضرتك. ستظهر هنا حالة القراءة وعدد الأحرف والتنبيهات.</div>
+</div>
+<div class="quick-grid">
+  <button class="quick-card" data-go="org"><span class="quick-icon">✧</span><span><strong>نظّم المحاضرة</strong><span>رتّب المحتوى واشرحه باللغتين.</span></span></button>
+  <button class="quick-card" data-go="quiz"><span class="quick-icon">▤</span><span><strong>اختبر فهمك</strong><span>أنشئ اختبارًا من نفس المصدر.</span></span></button>
+  <button class="quick-card" data-go="voice"><span class="quick-icon">◉</span><span><strong>اسأل المساعد</strong><span>ناقش نقطة غير واضحة.</span></span></button>
+</div>
+</section>
 
-<section id="org"><div class="card"><h3>🗂️ إعادة ترتيب المحاضرة</h3>
-<select id="orgMode"><option>ملخص منظم بعناوين</option><option>خريطة مفاهيم نصية</option><option>أسئلة وأجوبة مراجعة</option><option>شرح مبسط للمبتدئين</option></select>
-<button class="b" onclick="organize(this)">نظّم</button><div id="orgOut" class="out"></div></div></section>
+<section id="org"><div class="page-heading"><h1>استوديو الفهم</h1><p>حوّل النص الخام إلى مذكرات منظمة دون إهمال النقاط العلمية الصغيرة.</p></div>
+<div class="card"><div class="panel-head"><div><h3>كيف تريد تنظيم المحاضرة؟</h3><p>تُعالَج الأجزاء بالتتابع للمحافظة على تسلسل الأفكار في الملفات الطويلة.</p></div><div class="panel-mark">✧</div></div>
+<label for="orgMode">شكل المخرجات</label><select id="orgMode"><option>ملخص منظم بعناوين</option><option>خريطة مفاهيم نصية</option><option>أسئلة وأجوبة مراجعة</option><option>شرح مبسط للمبتدئين</option></select>
+<button class="b" onclick="organize(this)">ابدأ تنظيم المحاضرة</button><div id="orgOut" class="out"></div></div></section>
 
-<section id="quiz"><div class="card"><h3>📝 اختبار كامل</h3>
-<input id="qn" type="number" value="10" min="3" max="40">
-<button class="b" onclick="makeQuiz(this)">أنشئ الاختبار</button><div id="quizOut"></div></div></section>
+<section id="quiz"><div class="page-heading"><h1>مختبر الاختبارات</h1><p>تدرّب بأسئلة مستخرجة من محتوى محاضرتك، مع الإجابة والتفسير ومصدر السؤال.</p></div>
+<div class="card"><div class="panel-head"><div><h3>أنشئ اختبارًا جديدًا</h3><p>اختر عدد الأسئلة، وسيحاول النظام تغطية جميع أجزاء المادة.</p></div><div class="panel-mark">▤</div></div>
+<label for="qn">عدد الأسئلة</label><input id="qn" type="number" value="10" min="3" max="40">
+<button class="b" onclick="makeQuiz(this)">إنشاء الاختبار</button><div id="quizOut"></div></div></section>
 
-<section id="vid"><div class="card"><h3>🎬 فيديو شرح</h3>
-<input id="vn" type="number" value="6" min="3" max="15"><button class="b" onclick="makeVideo(this)">أنشئ الفيديو</button>
-<div id="vidOut"></div></div></section>
+<section id="vid"><div class="page-heading"><h1>مسرح الشرح</h1><p>حوّل الأفكار الأساسية إلى شرائح تعليمية مصحوبة بسرد صوتي يمكنك تشغيله من المتصفح.</p></div>
+<div class="card"><div class="panel-head"><div><h3>أنشئ عرض الشرح</h3><p>المخرجات شرائح تفاعلية مع قراءة صوتية، وليست ملف فيديو قابلًا للتصدير بعد.</p></div><div class="panel-mark">▷</div></div>
+<label for="vn">عدد الشرائح</label><input id="vn" type="number" value="6" min="3" max="15">
+<button class="b" onclick="makeVideo(this)">إنشاء شرائح الشرح</button><div id="vidOut"></div></div></section>
 
-<section id="voice"><div class="card"><h3>🎙️ محادثة صوتية</h3>
+<section id="voice"><div class="page-heading"><h1>اسأل StudyAI</h1><p>اسأل عن الفكرة أو المصطلح أو قارن بين نقطتين من محاضرتك.</p></div>
+<div class="card"><div class="panel-head"><div><h3>محادثة مرتبطة بالمصدر</h3><p>الإجابات المرتبطة بالمحاضرة يمكن أن تشير إلى الصفحات التي استُخرجت منها.</p></div><div class="panel-mark">◉</div></div>
 <button class="b" id="mic" onclick="toggleMic()">🎤 ابدأ الكلام</button>
-<input id="vtext" placeholder="أو اكتب سؤالك واضغط Enter" onkeydown="if(event.key==='Enter'){chat(this.value);this.value=''}">
+<input id="vtext" placeholder="اكتب سؤالك ثم اضغط Enter..." onkeydown="if(event.key==='Enter'){chat(this.value);this.value=''}">
 <div id="chat"></div></div></section>
 
-<section id="set"><div class="card"><h3>⚙️ الإعدادات</h3>
+<section id="set"><div class="page-heading"><h1>إعدادات المحرك</h1><p>اختر مزود الذكاء الاصطناعي والنموذج الذي سيعالج محاضراتك.</p></div>
+<div class="card"><div class="panel-head"><div><h3>الاتصال بمزود الذكاء الاصطناعي</h3><p>تأكد من صحة الرابط واسم النموذج ومفتاح الوصول قبل بدء المعالجة.</p></div><div class="panel-mark">⚙</div></div>
 <label>مزود الذكاء الاصطناعي</label>
 <select id="prov" onchange="presets()"><option value="ollama">Ollama (على جهازك)</option><option value="groq">Groq (سحابي)</option><option value="openrouter">OpenRouter (سحابي)</option><option value="custom">مخصص (OpenAI-compatible)</option></select>
-<label>رابط الـ API</label><input id="url"><label>اسم النموذج</label><input id="model">
-<label>المفتاح (للسحابي فقط)</label><input id="key" type="password">
-<button class="b" onclick="save()">حفظ</button> <button class="b" onclick="test()">اختبار الاتصال</button><div id="tst"></div>
-<small>Ollama: شغّله بالأمر <code>OLLAMA_ORIGINS=* ollama serve</code> وحمّل نموذج يدعم العربي مثل <code>qwen2.5:7b</code>. المفاتيح محفوظة في متصفحك فقط.</small></div></section>
+<div class="settings-grid"><div><label>رابط API</label><input id="url"></div><div><label>اسم النموذج</label><input id="model"></div></div>
+<label>مفتاح API (للمزود السحابي فقط)</label><input id="key" type="password" autocomplete="off" placeholder="أدخل مفتاح الوصول">
+<button class="b" onclick="save()">حفظ الإعدادات</button> <button class="b button secondary" onclick="test()">اختبار الاتصال</button><div id="tst"></div>
+<div class="status-line">تنبيه أمني: المفتاح الحالي يُحفظ في تخزين المتصفح المحلي. لا تشارك جهازك أو نسخة المتصفح مع أشخاص غير موثوقين. نحتاج لاحقًا نقل مفاتيح الخدمات إلى خادم آمن.</div>
+<p><small>Ollama: شغّله بالأمر <code>OLLAMA_ORIGINS=* ollama serve</code> وحمّل نموذجًا يدعم العربية مثل <code>qwen2.5:7b</code>.</small></p>
+</div></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const tabs=[['files','الملفات'],['org','تنظيم'],['quiz','اختبار'],['vid','فيديو'],['voice','صوت'],['set','الإعدادات']];
-$('nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
-function show(t){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===t));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t))}
-$('nav').onclick=e=>e.target.dataset.t&&show(e.target.dataset.t);show('files');
+const tabs=[['home','الرئيسية','⌂'],['files','المحاضرات','↥'],['org','استوديو الفهم','✧'],['quiz','الاختبارات','▤'],['vid','الشرح','▷'],['voice','اسأل AI','◉'],['set','الإعدادات','⚙']];
+$('nav').innerHTML='<div class="brand"><div class="brand-mark">S.</div><div class="brand-name">StudyAI<small>LEARN WITH CLARITY</small></div></div><div class="nav-caption">مساحة الدراسة</div>'+
+ tabs.map(t=>'<button class="nav-item" data-t="'+t[0]+'"><span class="nav-icon">'+t[2]+'</span><span class="nav-label">'+t[1]+'</span><span class="nav-arrow">‹</span></button>').join('')+
+ '<div class="nav-spacer"></div><div class="nav-foot"><strong>كل فكرة تبدأ بسؤال</strong><span>مساحة تعلمك الشخصية · StudyAI</span></div>';
+function show(t){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===t));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));}
+$('nav').onclick=e=>{const button=e.target.closest('button[data-t]');if(button)show(button.dataset.t)};
+document.addEventListener('click',e=>{const go=e.target.closest('[data-go]');if(go)show(go.dataset.go)});
+show('home');
 const P={ollama:['http://localhost:11434/v1','qwen2.5:7b'],groq:['https://api.groq.com/openai/v1','llama-3.3-70b-versatile'],openrouter:['https://openrouter.ai/api/v1','meta-llama/llama-3.3-70b-instruct:free'],custom:['','']};
 function presets(){const p=P[$('prov').value];$('url').value=p[0];$('model').value=p[1]}
 function load(){try{const s=JSON.parse(localStorage.getItem('cfg')||'null');if(s){$('prov').value=s.prov;$('url').value=s.url;$('model').value=s.model;$('key').value=s.key;return}}catch(e){}presets()}
