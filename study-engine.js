@@ -138,6 +138,8 @@
         results.push('========== الجزء ' + (i + 1) + ' — ' + label + ' ==========\n' + result);
         output.textContent = results.join('\n\n');
       }
+      await saveStudyArtifact('summary', mode, results.join('\n\n'), { sourceTitle: activeMaterialTitle });
+      await window.refreshLibrary();
     });
   };
 
@@ -660,6 +662,8 @@
 
       if (!allQuestions.length) throw new Error('لم يتم إنشاء أسئلة صالحة. أعد المحاولة.');
       renderQuiz(output, allQuestions);
+      await saveStudyArtifact('quiz', 'اختبار ' + new Date().toLocaleString('ar-EG'), allQuestions, { questionCount: allQuestions.length });
+      await window.refreshLibrary();
       if (allQuestions.length < requested) {
         appendText(output, 'small', 'ملاحظة: أنشأ النموذج ' + allQuestions.length + ' سؤالًا من أصل ' + requested + ' مطلوب؛ راجع عدد الأسئلة أو أعد المحاولة.');
       }
@@ -700,6 +704,8 @@
 
       if (!slides.length) throw new Error('لم يتم إنشاء شرائح صالحة.');
       renderSlides(output, slides);
+      await saveStudyArtifact('slides', 'شرح ' + new Date().toLocaleString('ar-EG'), slides, { slideCount: slides.length });
+      await window.refreshLibrary();
       if (slides.length < requested) {
         appendText(output, 'small', 'ملاحظة: أنشأ النموذج ' + slides.length + ' شريحة من أصل ' + requested + ' مطلوبة.');
       }
@@ -1073,6 +1079,13 @@
       await window.refreshReview();
       await window.refreshLibrary();
     });
+  };
+
+  const previousShow = window.show;
+  window.show = function (sectionId) {
+    if (typeof previousShow === 'function') previousShow(sectionId);
+    if (sectionId === 'library') window.refreshLibrary();
+    if (sectionId === 'review') window.refreshReview();
   };
 
   const saveButton = $('saveMaterial');
