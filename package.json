@@ -1,6 +1,6 @@
 {
   "name": "studyai",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "StudyAI bilingual lecture study assistant",
   "scripts": {
@@ -9,7 +9,7 @@
     "mobile:sync:ios": "npm run mobile:prepare && cap sync ios",
     "mobile:open:android": "npm run mobile:sync:android && cap open android",
     "mobile:open:ios": "npm run mobile:sync:ios && cap open ios",
-    "mobile:assets": "capacitor-assets generate --iconBackgroundColor '#101b2f' --iconBackgroundColorDark '#101b2f' --splashBackgroundColor '#f3f6fb' --splashBackgroundColorDark '#101b2f'"
+    "mobile:assets": "capacitor-assets generate --iconBackgroundColor \\\"#101b2f\\\" --iconBackgroundColorDark \\\"#101b2f\\\" --splashBackgroundColor \\\"#f3f6fb\\\" --splashBackgroundColorDark \\\"#101b2f\\\""
   },
   "dependencies": {
     "@capgo/capacitor-speech-recognition": "8.6.0",
