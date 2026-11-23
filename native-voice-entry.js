@@ -4,6 +4,7 @@ import { SpeechSynthesis } from '@capgo/capacitor-speech-synthesis';
 
 let partialListener = null;
 let errorListener = null;
+let listeningListener = null;
 let transcript = '';
 
 window.Capacitor = window.Capacitor || Capacitor;
@@ -14,7 +15,7 @@ window.StudyAINativeSpeech = {
     return Boolean(result && result.available);
   },
 
-  async start(language, onTranscript, onError) {
+  async start(language, onTranscript, onError, onState) {
     const availability = await SpeechRecognition.available();
     if (!availability || !availability.available) {
       throw new Error('خدمة التعرف على الكلام غير متاحة على هذا الجهاز.');
@@ -43,6 +44,10 @@ window.StudyAINativeSpeech = {
       }
     });
 
+    listeningListener = await SpeechRecognition.addListener('listeningState', event => {
+      if (typeof onState === 'function') onState(event);
+    });
+
     await SpeechRecognition.start({
       language: language || 'ar-EG',
       partialResults: true,
@@ -68,6 +73,10 @@ window.StudyAINativeSpeech = {
       if (errorListener) {
         await errorListener.remove();
         errorListener = null;
+      }
+      if (listeningListener) {
+        await listeningListener.remove();
+        listeningListener = null;
       }
     }
     return transcript;
