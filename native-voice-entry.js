@@ -89,15 +89,36 @@ window.StudyAINativeSpeech = {
     const exact = voices.find(voice => (voice.language || '').toLowerCase() === lang.toLowerCase());
     const regional = voices.find(voice => (voice.language || '').toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
     const selected = exact || regional || null;
-    return SpeechSynthesis.speak({
-      text: String(text || ''),
-      language: selected ? selected.language : lang,
-      voiceId: selected ? selected.id : undefined,
-      rate: 0.92,
-      pitch: 1,
-      volume: 1,
-      queueStrategy: 'Flush'
+    await SpeechSynthesis.cancel();
+    let utteranceId = null;
+    let endHandle = null;
+    let errorHandle = null;
+    let finishResolve;
+    let finishReject;
+    const finished = new Promise((resolve, reject) => { finishResolve = resolve; finishReject = reject; });
+    endHandle = await SpeechSynthesis.addListener('end', event => {
+      if (!event.utteranceId || !utteranceId || event.utteranceId === utteranceId) finishResolve();
     });
+    errorHandle = await SpeechSynthesis.addListener('error', event => {
+      if (!event.utteranceId || !utteranceId || event.utteranceId === utteranceId) finishReject(new Error(event.error || 'تعذر تشغيل الصوت.'));
+    });
+    try {
+      const result = await SpeechSynthesis.speak({
+        text: String(text || ''),
+        language: selected ? selected.language : lang,
+        voiceId: selected ? selected.id : undefined,
+        rate: 0.92,
+        pitch: 1,
+        volume: 1,
+        queueStrategy: 'Flush'
+      });
+      utteranceId = result && result.utteranceId;
+      await finished;
+      return result;
+    } finally {
+      if (endHandle) await endHandle.remove();
+      if (errorHandle) await errorHandle.remove();
+    }
   },
 
   async stopSpeaking() {
