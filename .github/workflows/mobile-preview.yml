@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - feature/v2.1-long-lecture-engine
 
 permissions:
