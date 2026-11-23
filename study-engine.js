@@ -400,4 +400,116 @@
       (notices.length ? 'تنبيه: ' + notices.join('؛ ') + '. ' : '') +
       'ستتم معالجة المحاضرة على أجزاء متتابعة بدل الاقتصار على أول جزء منها.';
   };
+  function allocateChunkWork(chunks, totalWork) {
+    const count = chunks.length;
+    if (count > totalWork) {
+      const indexes = [];
+      if (totalWork === 1) indexes.push(Math.floor((count - 1) / 2));
+      else {
+        for (let i = 0; i < totalWork; i++) {
+          indexes.push(Math.floor(i * (count - 1) / (totalWork - 1)));
+        }
+      }
+      return indexes.map(function (index) { return { index: index, amount: 1 }; });
+    }
+
+    const allocations = chunks.map(function (chunk, index) {
+      return { index: index, amount: 1, remainder: 0 };
+    });
+    let remaining = totalWork - count;
+    if (!remaining) return allocations;
+
+    const totalLength = chunks.reduce(function (sum, chunk) { return sum + chunk.length; }, 0);
+    let assigned = 0;
+    allocations.forEach(function (item) {
+      const exact = remaining * chunks[item.index].length / Math.max(1, totalLength);
+      const whole = Math.floor(exact);
+      item.amount += whole;
+      item.remainder = exact - whole;
+      assigned += whole;
+    });
+    let left = remaining - assigned;
+    allocations.slice().sort(function (a, b) {
+      return b.remainder - a.remainder || a.index - b.index;
+    }).slice(0, left).forEach(function (item) {
+      allocations[item.index].amount += 1;
+    });
+    return allocations;
+  }
+
+  window.makeQuiz = function (button) {
+    const text = sourceText();
+    if (!text) { alert('ارفع ملفًا أو الصق نص المحاضرة أولًا.'); return; }
+    const output = $('quizOut');
+    const requested = Math.max(3, Math.min(40, Number($('qn').value) || 10));
+    runTask(button, output, async function () {
+      const chunks = sourceChunks(text, CHUNK_SIZE);
+      if (!chunks.length) throw new Error('لم يتم العثور على نص قابل للقراءة.');
+      const plan = allocateChunkWork(chunks, requested);
+      const allQuestions = [];
+      for (let i = 0; i < plan.length; i++) {
+        const item = plan[i];
+        const label = sourceLabel(chunks[item.index]);
+        output.textContent = 'إنشاء الأسئلة من الجزء ' + (item.index + 1) + ' من ' + chunks.length +
+          ' — ' + label + ' (' + (i + 1) + '/' + plan.length + ')';
+        const prompt =
+          'أنشئ ' + item.amount + ' سؤالًا جامعيًا من الجزء التالي فقط. نوّع قدر الإمكان بين mcq و tf و fill و essay. ' +
+          'لا تختبر معلومة غير موجودة في هذا الجزء. أرفق مصدر السؤال بصيغة واضحة مثل ' + label + '. ' +
+          'أعد JSON صالحًا فقط: {"questions":[{"type":"mcq","q":"السؤال","options":["أ","ب","ج","د"],"answer":0,"explain":"التفسير","source":"' + label + '"},' +
+          '{"type":"tf","q":"العبارة","answer":true,"explain":"التفسير","source":"' + label + '"},' +
+          '{"type":"fill","q":"أكمل: ...","answer":"الإجابة","explain":"التفسير","source":"' + label + '"},' +
+          '{"type":"essay","q":"السؤال","answer":"إجابة نموذجية","source":"' + label + '"}]}.\n\n' +
+          'نص المحاضرة:\n' + chunks[item.index];
+        const raw = await ai([
+          { role: 'system', content: 'أنت واضع امتحانات جامعية. اعتمد فقط على النص، وأخرج JSON صالحًا دون Markdown.' },
+          { role: 'user', content: prompt }
+        ]);
+        const data = cleanJson(raw);
+        const questions = Array.isArray(data.questions) ? data.questions : [];
+        questions.slice(0, item.amount).forEach(function (question) {
+          question.source = question.source || label;
+          allQuestions.push(question);
+        });
+      }
+      if (!allQuestions.length) throw new Error('لم يتم إنشاء أسئلة صالحة. أعد المحاولة.');
+      renderQuiz(output, allQuestions);
+    });
+  };
+
+  window.makeVideo = function (button) {
+    const text = sourceText();
+    if (!text) { alert('ارفع ملفًا أو الصق نص المحاضرة أولًا.'); return; }
+    const output = $('vidOut');
+    const requested = Math.max(3, Math.min(15, Number($('vn').value) || 6));
+    runTask(button, output, async function () {
+      const chunks = sourceChunks(text, CHUNK_SIZE);
+      if (!chunks.length) throw new Error('لم يتم العثور على نص قابل للقراءة.');
+      const plan = allocateChunkWork(chunks, requested);
+      const slides = [];
+      for (let i = 0; i < plan.length; i++) {
+        const item = plan[i];
+        const label = sourceLabel(chunks[item.index]);
+        output.textContent = 'إعداد شرائح الجزء ' + (item.index + 1) + ' من ' + chunks.length +
+          ' — ' + label + ' (' + (i + 1) + '/' + plan.length + ')';
+        const prompt =
+          'أنشئ ' + item.amount + ' شرائح شرح لهذا الجزء من محاضرة جامعية فقط. حافظ على ترتيب المادة، واكتب نقاطًا مفهومة مع شرح صوتي واضح، ولا تضف معلومة خارج النص. ' +
+          'أرفق مصدر الشريحة: ' + label + '. أخرج JSON صالحًا فقط: ' +
+          '{"slides":[{"title":"عنوان","bullets":["نقطة 1","نقطة 2"],"narration":"شرح المدرس","source":"' + label + '"}]}\n\n' +
+          'نص المحاضرة:\n' + chunks[item.index];
+        const raw = await ai([
+          { role: 'system', content: 'أنت معدّ دروس تعليمية. اعتمد فقط على المصدر وأخرج JSON صالحًا دون Markdown.' },
+          { role: 'user', content: prompt }
+        ]);
+        const data = cleanJson(raw);
+        const partSlides = Array.isArray(data.slides) ? data.slides : [];
+        partSlides.slice(0, item.amount).forEach(function (slide) {
+          slide.source = slide.source || label;
+          slides.push(slide);
+        });
+      }
+      if (!slides.length) throw new Error('لم يتم إنشاء شرائح صالحة.');
+      renderSlides(output, slides);
+    });
+  };
+
 })();
