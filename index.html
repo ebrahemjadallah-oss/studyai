@@ -327,7 +327,16 @@ async function toggleMic(){
    if(rec){rec.stop();return}
  }
  if(window.StudyAINativeSpeech&&window.Capacitor&&window.Capacitor.isNativePlatform()){
-   try{nativeTranscript='';await window.StudyAINativeSpeech.start(lang,text=>{nativeTranscript=text;$('vtext').placeholder=text||'بسمعك...'});nativeListening=true;on=true;$('mic').textContent='🔴 بسمعك... (اضغط للإيقاف)';return}catch(e){alert('تعذر تشغيل الميكروفون: '+e.message);on=false;$('mic').textContent='🎤 ابدأ الكلام';return}
+   try{
+     nativeTranscript='';
+     await window.StudyAINativeSpeech.start(
+       lang,
+       text=>{nativeTranscript=text;$('vtext').placeholder=text||'بسمعك...'},
+       error=>{nativeListening=false;on=false;$('mic').textContent='🎤 ابدأ الكلام';$('vtext').placeholder='تعذر التعرف على الصوت: '+error.message},
+       state=>{if(state&&(state.state==='stopped'||state.status==='stopped')){nativeListening=false;on=false;$('mic').textContent='🎤 ابدأ الكلام';if(state.reason==='silence'&&nativeTranscript.trim()){const finalText=nativeTranscript.trim();nativeTranscript='';chat(finalText)}}}
+     );
+     nativeListening=true;on=true;$('mic').textContent='🔴 بسمعك... (اضغط للإيقاف)';return
+   }catch(e){nativeListening=false;on=false;alert('تعذر تشغيل الميكروفون: '+e.message);$('mic').textContent='🎤 ابدأ الكلام';return}
  }
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!SR){alert('التعرّف على الكلام غير متاح في هذا المتصفح. جرّب Chrome أو استخدم نسخة التطبيق الأصلية.');return}
