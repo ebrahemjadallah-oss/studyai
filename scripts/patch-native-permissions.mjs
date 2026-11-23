@@ -13,7 +13,16 @@ if (platform === 'android') {
     xml = xml.slice(0, applicationTag) + permission + '\n    ' + xml.slice(applicationTag);
     await writeFile(path, xml, 'utf8');
   }
-  console.log('Android microphone permission configured.');
+  const variablesPath = 'android/variables.gradle';
+  try {
+    let variables = await readFile(variablesPath, 'utf8');
+    variables = variables.replace(/targetSdkVersion\\s*=\\s*\\d+/, 'targetSdkVersion = 36');
+    variables = variables.replace(/compileSdkVersion\\s*=\\s*\\d+/, 'compileSdkVersion = 36');
+    await writeFile(variablesPath, variables, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  console.log('Android microphone permission configured; target SDK set to API 36 when variables.gradle is present.');
 } else if (platform === 'ios') {
   const path = 'ios/App/App/Info.plist';
   let plist = await readFile(path, 'utf8');
