@@ -6,6 +6,7 @@ let partialListener = null;
 let errorListener = null;
 let listeningListener = null;
 let transcript = '';
+let activeSpeechResolve = null;
 
 window.Capacitor = window.Capacitor || Capacitor;
 
@@ -99,6 +100,10 @@ window.StudyAINativeSpeech = {
     const regional = voices.find(voice => (voice.language || '').toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
     const selected = exact || regional || null;
     await SpeechSynthesis.cancel();
+    if (activeSpeechResolve) {
+      activeSpeechResolve();
+      activeSpeechResolve = null;
+    }
     let utteranceId = null;
     let endHandle = null;
     let errorHandle = null;
@@ -111,6 +116,7 @@ window.StudyAINativeSpeech = {
     errorHandle = await SpeechSynthesis.addListener('error', event => {
       if (!event.utteranceId || !utteranceId || event.utteranceId === utteranceId) finishReject(new Error(event.error || 'تعذر تشغيل الصوت.'));
     });
+    activeSpeechResolve = finishResolve;
     try {
       const result = await SpeechSynthesis.speak({
         text: String(text || ''),
@@ -125,12 +131,17 @@ window.StudyAINativeSpeech = {
       await finished;
       return result;
     } finally {
+      if (activeSpeechResolve === finishResolve) activeSpeechResolve = null;
       if (endHandle) await endHandle.remove();
       if (errorHandle) await errorHandle.remove();
     }
   },
 
   async stopSpeaking() {
-    return SpeechSynthesis.cancel();
+    await SpeechSynthesis.cancel();
+    if (activeSpeechResolve) {
+      activeSpeechResolve();
+      activeSpeechResolve = null;
+    }
   }
 };
