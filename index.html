@@ -62,6 +62,11 @@ section.on{display:block}
 .hero-dot.one{top:17px;right:24px}.hero-dot.two{bottom:14px;left:23px;background:#93a9ff}
 .quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:18px 0}
 .quick-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:17px;display:flex;align-items:flex-start;gap:13px;min-width:0;cursor:pointer;text-align:right;transition:transform .2s,box-shadow .2s,border .2s}
+.quick-card{font:inherit;width:100%}
+.quick-card>.quick-icon{display:grid;color:#0c917b}
+.quick-card>span:last-child{display:block;min-width:0}
+.quick-card>span:last-child strong{display:block}
+.quick-card>span:last-child span{display:block}
 .quick-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:#b6e9df}
 .quick-icon{width:40px;height:40px;border-radius:13px;background:#e2f8f2;color:#0c917b;display:grid;place-items:center;font-size:19px;flex:none}
 .quick-card strong{display:block;font-size:13px;color:var(--ink);margin-bottom:3px}
