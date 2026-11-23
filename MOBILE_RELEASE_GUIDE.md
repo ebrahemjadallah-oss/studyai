@@ -20,6 +20,7 @@ These are preview/test builds. They are not signed store-release packages and ar
 ## Generate native projects locally
 
 \`\`\`sh
+npm install -g npm@12
 npm install
 npm run mobile:prepare
 npx cap add android
