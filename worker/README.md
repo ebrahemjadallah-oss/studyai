@@ -1,0 +1,34 @@
+# StudyAI AI Proxy (Cloudflare Workers)
+
+This proxy keeps Groq and OpenRouter API keys on the server instead of inside the public app.
+
+## Deploy
+
+1. Install Node.js 22+ and Wrangler: `npm install -g wrangler`.
+2. Sign in: `wrangler login`.
+3. From this folder, add provider keys as Worker secrets:
+
+   ```sh
+   wrangler secret put GROQ_API_KEY
+   wrangler secret put OPENROUTER_API_KEY
+   ```
+
+   You can configure only one provider; the other will return a clear not-configured error.
+
+4. Review `ALLOWED_ORIGINS` in `wrangler.toml`. Keep only the exact website and native WebView origins you control.
+5. Deploy:
+
+   ```sh
+   wrangler deploy
+   ```
+
+6. Copy the Worker URL into StudyAI → Settings → Secure StudyAI Proxy URL.
+
+## Security notes
+
+- Provider URLs are fixed in the Worker; users cannot submit an arbitrary upstream URL.
+- API secrets are read from Worker environment secrets and are never returned to clients.
+- Origins are allow-listed; messages, roles, model identifiers and body size are validated.
+- Configure a Cloudflare WAF rate-limiting rule for `POST /chat/completions` before public launch, and add budget limits at each AI provider.
+- This Worker intentionally does not store prompts or responses. The AI providers process prompts according to their own terms and retention settings.
+- Do not add provider secrets to `wrangler.toml`, Git, browser storage, or the Capacitor app.
