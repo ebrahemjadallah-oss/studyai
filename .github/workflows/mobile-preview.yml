@@ -26,12 +26,16 @@ jobs:
       - name: Install Android 16 SDK
         run: |
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+      - name: Update npm for Capacitor Assets
+        run: npm install -g npm@12
       - name: Install dependencies
         run: npm install
       - name: Prepare web assets
         run: npm run mobile:prepare
       - name: Generate Android project
         run: npx cap add android
+      - name: Generate Android app icons and splash
+        run: npx capacitor-assets generate --android --iconBackgroundColor "#101b2f" --iconBackgroundColorDark "#101b2f" --splashBackgroundColor "#f3f6fb" --splashBackgroundColorDark "#101b2f"
       - name: Sync native plugins
         run: npx cap sync android
       - name: Add required permissions
@@ -61,6 +65,8 @@ jobs:
         run: npm run mobile:prepare
       - name: Generate iOS project
         run: npx cap add ios
+      - name: Generate iOS app icons and splash
+        run: npx capacitor-assets generate --ios --iconBackgroundColor "#101b2f" --iconBackgroundColorDark "#101b2f" --splashBackgroundColor "#f3f6fb" --splashBackgroundColorDark "#101b2f"
       - name: Sync native plugins
         run: npx cap sync ios
       - name: Add microphone and speech permissions
