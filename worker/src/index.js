@@ -74,6 +74,13 @@ export default {
     }
     if (!validMessages(messages)) return json({ error: 'Invalid or oversized messages.' }, 400, headers);
 
+    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const estimatedUnits = Math.max(1, Math.ceil(messages.reduce((sum, item) => sum + item.content.length, 0) / 4000));
+    if (env.AI_RATE_LIMITER) {
+      const rate = await env.AI_RATE_LIMITER.limit({ key: clientIp, delta: estimatedUnits });
+      if (!rate.success) return json({ error: 'Rate limit reached. Please try again in a minute.' }, 429, headers);
+    }
+
     try {
       const upstream = await fetch(endpoint, {
         method: 'POST',
