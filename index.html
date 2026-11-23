@@ -176,7 +176,14 @@ small{color:var(--muted);font-size:10px}
  <div class="step-card"><span class="step-no">03 / PRACTICE</span><h4>اختبر نفسك</h4><p>حل الأسئلة واكتشف النقاط التي تحتاج إلى مراجعة.</p></div>
 </div>
 </section>
-<section id="files">
+<section id="library"><div class="page-heading"><h1>مكتبتي</h1><p>محاضراتك وملخصاتك واختباراتك محفوظة محليًا على هذا الجهاز.</p></div>
+<div class="card"><div class="panel-head"><div><h3>المحتوى المحفوظ</h3><p>يمكنك فتح محاضرة سابقة أو الرجوع إلى نتيجة مذاكرتك.</p></div><div class="panel-mark">▣</div></div>
+<div id="libraryOut"></div><button class="b button secondary" onclick="refreshLibrary()">تحديث المكتبة</button>
+</div></section>
+<section id="review"><div class="page-heading"><h1>مراجعتك اليومية</h1><p>راجع البطاقات التي حان موعدها، وحدد مدى سهولة تذكّر الإجابة.</p></div>
+<div class="card"><div class="panel-head"><div><h3>بطاقات مستحقة للمراجعة</h3><p>المراجعة المتباعدة تساعدك على تثبيت المصطلحات والتعريفات.</p></div><div class="panel-mark">↻</div></div>
+<div id="reviewOut"></div><button class="b button secondary" onclick="refreshReview()">تحديث المراجعة</button>
+</div></section><section id="files">
 <div class="page-heading"><h1>مكتبة المحاضرات</h1><p>ارفع مصدرك الدراسي أو الصق النص، ثم اختر الأداة المناسبة لفهمه ومراجعته.</p></div>
 <div class="card">
   <div class="panel-head"><div><h3>أضف محاضرة جديدة</h3><p>تُقرأ الملفات محليًا داخل المتصفح قبل إرسال النص إلى مزود الذكاء الاصطناعي الذي تختاره.</p></div><div class="panel-mark">↥</div></div>
@@ -187,6 +194,7 @@ small{color:var(--muted);font-size:10px}
   </div>
   <label for="txt">نص المحاضرة أو النص المستخرج</label>
   <textarea id="txt" rows="10" placeholder="يمكنك أيضًا لصق نص المحاضرة هنا..."></textarea>
+  <button class="b" id="saveMaterial">حفظ المحاضرة في مكتبتي</button>
   <div id="info" class="status-line">جاهز لاستقبال محاضرتك. ستظهر هنا حالة القراءة وعدد الأحرف والتنبيهات.</div>
 </div>
 <div class="quick-grid">
@@ -199,7 +207,9 @@ small{color:var(--muted);font-size:10px}
 <section id="org"><div class="page-heading"><h1>استوديو الفهم</h1><p>حوّل النص الخام إلى مذكرات منظمة دون إهمال النقاط العلمية الصغيرة.</p></div>
 <div class="card"><div class="panel-head"><div><h3>كيف تريد تنظيم المحاضرة؟</h3><p>تُعالَج الأجزاء بالتتابع للمحافظة على تسلسل الأفكار في الملفات الطويلة.</p></div><div class="panel-mark">✧</div></div>
 <label for="orgMode">شكل المخرجات</label><select id="orgMode"><option>ملخص منظم بعناوين</option><option>خريطة مفاهيم نصية</option><option>أسئلة وأجوبة مراجعة</option><option>شرح مبسط للمبتدئين</option></select>
-<button class="b" onclick="organize(this)">ابدأ تنظيم المحاضرة</button><div id="orgOut" class="out"></div></div></section>
+<button class="b" onclick="organize(this)">ابدأ تنظيم المحاضرة</button>
+<button class="b button secondary" onclick="makeFlashcards(this)">أنشئ بطاقات الحفظ</button>
+<div id="orgOut" class="out"></div><div id="flashOut" class="out"></div></div></section>
 
 <section id="quiz"><div class="page-heading"><h1>مختبر الاختبارات</h1><p>تدرّب بأسئلة مستخرجة من محتوى محاضرتك، مع الإجابة والتفسير ومصدر السؤال.</p></div>
 <div class="card"><div class="panel-head"><div><h3>أنشئ اختبارًا جديدًا</h3><p>اختر عدد الأسئلة، وسيحاول النظام تغطية جميع أجزاء المادة.</p></div><div class="panel-mark">▤</div></div>
@@ -213,8 +223,13 @@ small{color:var(--muted);font-size:10px}
 
 <section id="voice"><div class="page-heading"><h1>اسأل StudyAI</h1><p>اسأل عن الفكرة أو المصطلح أو قارن بين نقطتين من محاضرتك.</p></div>
 <div class="card"><div class="panel-head"><div><h3>محادثة مرتبطة بالمصدر</h3><p>الإجابات المرتبطة بالمحاضرة يمكن أن تشير إلى الصفحات التي استُخرجت منها.</p></div><div class="panel-mark">◉</div></div>
+<div class="settings-grid">
+<div><label for="dialect">أسلوب الرد</label><select id="dialect"><option value="egyptian">العامية المصرية</option><option value="msa">العربية الفصحى المبسطة</option><option value="english">English</option></select></div>
+<div><label for="voiceLang">لغة الصوت والتعرّف</label><select id="voiceLang"><option value="ar-EG">العربية المصرية (ar-EG)</option><option value="ar">العربية</option><option value="en-US">English (US)</option></select></div>
+</div>
 <button class="b" id="mic" onclick="toggleMic()">🎤 ابدأ الكلام</button>
-<input id="vtext" placeholder="اكتب سؤالك ثم اضغط Enter..." onkeydown="if(event.key==='Enter'){chat(this.value);this.value=''}">
+<input id="vtext" placeholder="اكتب سؤالك أو اتكلم بالمصري..." onkeydown="if(event.key==='Enter'){chat(this.value);this.value=''}">
+<div class="status-line">الصوت المصري يعتمد على دعم جهازك لخدمة التعرّف والنطق باللغة ar-EG. داخل التطبيق الأصلي يستخدم StudyAI محرك الصوت الخاص بنظام الهاتف.</div>
 <div id="chat"></div></div></section>
 
 <section id="set"><div class="page-heading"><h1>إعدادات المحرك</h1><p>اختر مزود الذكاء الاصطناعي والنموذج الذي سيعالج محاضراتك.</p></div>
@@ -222,15 +237,16 @@ small{color:var(--muted);font-size:10px}
 <label>مزود الذكاء الاصطناعي</label>
 <select id="prov" onchange="presets()"><option value="ollama">Ollama (على جهازك)</option><option value="groq">Groq (سحابي)</option><option value="openrouter">OpenRouter (سحابي)</option><option value="custom">مخصص (OpenAI-compatible)</option></select>
 <div class="settings-grid"><div><label>رابط API</label><input id="url"></div><div><label>اسم النموذج</label><input id="model"></div></div>
-<label>مفتاح API (للمزود السحابي فقط)</label><input id="key" type="password" autocomplete="off" placeholder="أدخل مفتاح الوصول">
+<label for="proxyUrl">رابط بوابة StudyAI الآمنة (Cloudflare Worker)</label><input id="proxyUrl" type="url" placeholder="https://studyai-api.yourname.workers.dev">
+<label for="key">مفتاح محلي (لـ Custom فقط)</label><input id="key" type="password" autocomplete="off" placeholder="اتركه فارغًا مع Groq وOpenRouter">
 <button class="b" onclick="save()">حفظ الإعدادات</button> <button class="b button secondary" onclick="test()">اختبار الاتصال</button><div id="tst"></div>
-<div class="status-line">تنبيه أمني: المفتاح الحالي يُحفظ في تخزين المتصفح المحلي. لا تشارك جهازك أو نسخة المتصفح مع أشخاص غير موثوقين. نحتاج لاحقًا نقل مفاتيح الخدمات إلى خادم آمن.</div>
+<div class="status-line">المزودان Groq وOpenRouter يرسلان الطلبات عبر البوابة الآمنة ولا يُخزّن مفتاحهما في جهازك. أضف مفاتيح المزودين كـ Secrets في Cloudflare Worker. لا تستخدم مفتاح API شخصيًا داخل تطبيق منشور.</div>
 <p><small>Ollama: شغّله بالأمر <code>OLLAMA_ORIGINS=* ollama serve</code> وحمّل نموذجًا يدعم العربية مثل <code>qwen2.5:7b</code>.</small></p>
 </div></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const tabs=[['home','الرئيسية','⌂'],['files','المحاضرات','↥'],['org','استوديو الفهم','✧'],['quiz','الاختبارات','▤'],['vid','الشرح','▷'],['voice','اسأل AI','◉'],['set','الإعدادات','⚙']];
+const tabs=[['home','الرئيسية','⌂'],['files','المحاضرات','↥'],['library','مكتبتي','▣'],['review','المراجعة','↻'],['org','استوديو الفهم','✧'],['quiz','الاختبارات','▤'],['vid','الشرح','▷'],['voice','اسأل AI','◉'],['set','الإعدادات','⚙']];
 $('nav').innerHTML='<div class="brand"><div class="brand-mark">S.</div><div class="brand-name">StudyAI<small>LEARN WITH CLARITY</small></div></div><div class="nav-caption">مساحة الدراسة</div>'+
  tabs.map(t=>'<button class="nav-item" data-t="'+t[0]+'"><span class="nav-icon">'+t[2]+'</span><span class="nav-label">'+t[1]+'</span><span class="nav-arrow">‹</span></button>').join('')+
  '<div class="nav-spacer"></div><div class="nav-foot"><strong>كل فكرة تبدأ بسؤال</strong><span>مساحة تعلمك الشخصية · StudyAI</span></div>';
