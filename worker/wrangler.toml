@@ -1,0 +1,12 @@
+name = "studyai-ai-proxy"
+main = "src/index.js"
+compatibility_date = "2026-11-23"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGINS = "https://ebrahemjadallah-oss.github.io,capacitor://localhost,https://localhost,http://localhost"
+
+[[ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "834202611"
+simple = { limit = 30, period = 60 }

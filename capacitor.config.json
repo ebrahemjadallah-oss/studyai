@@ -1,0 +1,12 @@
+{
+  "appId": "com.ebrahemjadallah.studyai",
+  "appName": "StudyAI",
+  "webDir": "www",
+  "backgroundColor": "#f3f6fb",
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

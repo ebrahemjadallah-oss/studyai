@@ -1,0 +1,83 @@
+name: StudyAI mobile preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/v2.1-long-lecture-engine
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug:
+    name: Build Android debug APK
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v4
+      - name: Install Android 16 SDK
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+      - name: Update npm for Capacitor Assets
+        run: npm install -g npm@12
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare web assets
+        run: npm run mobile:prepare
+      - name: Generate Android project
+        run: npx cap add android
+      - name: Generate Android app icons and splash
+        run: npx capacitor-assets generate --android --iconBackgroundColor "#101b2f" --iconBackgroundColorDark "#101b2f" --splashBackgroundColor "#f3f6fb" --splashBackgroundColorDark "#101b2f"
+      - name: Sync native plugins
+        run: npx cap sync android
+      - name: Add required permissions
+        run: node scripts/patch-native-permissions.mjs android
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studyai-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios-simulator:
+    name: Build iOS simulator app
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Update npm for Capacitor Assets
+        run: npm install -g npm@12
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare web assets
+        run: npm run mobile:prepare
+      - name: Generate iOS project
+        run: npx cap add ios
+      - name: Generate iOS app icons and splash
+        run: npx capacitor-assets generate --ios --iconBackgroundColor "#101b2f" --iconBackgroundColorDark "#101b2f" --splashBackgroundColor "#f3f6fb" --splashBackgroundColorDark "#101b2f"
+      - name: Sync native plugins
+        run: npx cap sync ios
+      - name: Add microphone and speech permissions
+        run: node scripts/patch-native-permissions.mjs ios
+      - name: Build iOS simulator app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studyai-ios-simulator
+          path: build/ios/Build/Products/Debug-iphonesimulator/App.app
+          if-no-files-found: error
